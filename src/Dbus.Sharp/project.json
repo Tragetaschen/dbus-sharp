@@ -1,0 +1,29 @@
+﻿{
+    "version": "0.9.0-*",
+    "dependencies": {
+        "Mono.Posix": "4.0.0"
+    },
+    "frameworks": {
+        "dnx451": {
+            "frameworkAssemblies": {
+                "System.Xml": "4.0.0.0"
+            }
+        }
+    },
+    "compilationOptions": {
+        "allowUnsafe": true
+    },
+    "exclude": [
+        "AssemblyInfo.cs",
+        "Server.cs",
+        "ServerBus.cs",
+        "UnixMonoTransport.cs",
+        "Daemon.cs"
+    ],
+    "bundleExclude": [
+        "*.mk",
+        "*.dll.config",
+        "gencssources",
+        "*.am"
+    ]
+}

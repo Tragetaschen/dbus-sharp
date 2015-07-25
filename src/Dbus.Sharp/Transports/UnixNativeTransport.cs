@@ -5,7 +5,7 @@
 //We send BSD-style credentials on all platforms
 //Doesn't seem to break Linux (but is redundant there)
 //This may turn out to be a bad idea
-#define HAVE_CMSGCRED
+//#define HAVE_CMSGCRED
 
 using System;
 using System.IO;
@@ -13,12 +13,13 @@ using System.Text;
 using System.Runtime.InteropServices;
 using DBus.Unix;
 using DBus.Protocol;
+using System.Net.Sockets;
 
 namespace DBus.Transports
 {
 	class UnixNativeTransport : UnixTransport
 	{
-		internal UnixSocket socket;
+		//internal UnixSocket socket;
 
 		public override string AuthString ()
 		{
@@ -32,14 +33,19 @@ namespace DBus.Transports
 				throw new ArgumentException ("path");
 
 			if (@abstract)
-				socket = OpenAbstractUnix (path);
+			{
+				var socket = OpenAbstractUnix(path);
+				SocketHandle = (long)socket.Handle;
+				Stream = new UnixStream(socket);
+			}
 			else
-				socket = OpenUnix (path);
+			{
+				var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.IP);
+				socket.Connect(new Mono.Unix.UnixEndPoint(path));
 
-			//socket.Blocking = true;
-			SocketHandle = (long)socket.Handle;
-			//Stream = new UnixStream ((int)socket.Handle);
-			Stream = new UnixStream (socket);
+				SocketHandle = (long)socket.Handle;
+				Stream = new NetworkStream(socket, true);
+			}
 		}
 
 		//send peer credentials null byte

@@ -7,30 +7,30 @@ using System;
 
 namespace DBus
 {
-	class BusException : Exception
-	{
-		public BusException (string errorName, string errorMessage)
-		{
-			this.ErrorName = errorName;
-			this.ErrorMessage = errorMessage;
-		}
+    class BusException : Exception
+    {
+        public BusException(string errorName, string errorMessage)
+        {
+            this.ErrorName = errorName;
+            this.ErrorMessage = errorMessage;
+        }
 
-		public BusException (string errorName, string format, params object[] args)
-		{
-			this.ErrorName = errorName;
-			this.ErrorMessage = String.Format (format, args);
-		}
+        public BusException(string errorName, string format, params object[] args)
+        {
+            this.ErrorName = errorName;
+            this.ErrorMessage = String.Format(format, args);
+        }
 
-		public override string Message
-		{
-			get
-			{
-				return ErrorName + ": " + ErrorMessage;
-			}
-		}
+        public override string Message
+        {
+            get
+            {
+                return ErrorName + ": " + ErrorMessage;
+            }
+        }
 
-		public readonly string ErrorName;
+        public readonly string ErrorName;
 
-		public readonly string ErrorMessage;
-	}
+        public readonly string ErrorMessage;
+    }
 }

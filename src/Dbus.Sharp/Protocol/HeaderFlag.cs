@@ -7,11 +7,11 @@ using System;
 
 namespace DBus.Protocol
 {
-	[Flags]
-	public enum HeaderFlag : byte
-	{
-		None = 0,
-		NoReplyExpected = 0x1,
-		NoAutoStart = 0x2,
-	}
+    [Flags]
+    public enum HeaderFlag : byte
+    {
+        None = 0,
+        NoReplyExpected = 0x1,
+        NoAutoStart = 0x2,
+    }
 }

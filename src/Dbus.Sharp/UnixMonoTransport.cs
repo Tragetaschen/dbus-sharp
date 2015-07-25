@@ -12,55 +12,55 @@ using Mono.Unix.Native;
 
 namespace DBus.Transports
 {
-	class UnixMonoTransport : UnixTransport
-	{
-		protected Socket socket;
+    class UnixMonoTransport : UnixTransport
+    {
+        protected Socket socket;
 
-		public override void Open (string path, bool @abstract)
-		{
-			if (@abstract)
-				socket = OpenAbstractUnix (path);
-			else
-				socket = OpenUnix (path);
+        public override void Open(string path, bool @abstract)
+        {
+            if (@abstract)
+                socket = OpenAbstractUnix(path);
+            else
+                socket = OpenUnix(path);
 
-			socket.Blocking = true;
-			SocketHandle = (long)socket.Handle;
-			//Stream = new UnixStream ((int)socket.Handle);
-			Stream = new NetworkStream (socket);
-		}
+            socket.Blocking = true;
+            SocketHandle = (long)socket.Handle;
+            //Stream = new UnixStream ((int)socket.Handle);
+            Stream = new NetworkStream(socket);
+        }
 
-		//send peer credentials null byte. note that this might not be portable
-		//there are also selinux, BSD etc. considerations
-		public override void WriteCred ()
-		{
-			Stream.WriteByte (0);
-		}
+        //send peer credentials null byte. note that this might not be portable
+        //there are also selinux, BSD etc. considerations
+        public override void WriteCred()
+        {
+            Stream.WriteByte(0);
+        }
 
-		public override string AuthString ()
-		{
-			long uid = UnixUserInfo.GetRealUserId ();
+        public override string AuthString()
+        {
+            long uid = UnixUserInfo.GetRealUserId();
 
-			return uid.ToString ();
-		}
+            return uid.ToString();
+        }
 
-		protected Socket OpenAbstractUnix (string path)
-		{
-			AbstractUnixEndPoint ep = new AbstractUnixEndPoint (path);
+        protected Socket OpenAbstractUnix(string path)
+        {
+            AbstractUnixEndPoint ep = new AbstractUnixEndPoint(path);
 
-			Socket client = new Socket (AddressFamily.Unix, SocketType.Stream, 0);
-			client.Connect (ep);
+            Socket client = new Socket(AddressFamily.Unix, SocketType.Stream, 0);
+            client.Connect(ep);
 
-			return client;
-		}
+            return client;
+        }
 
-		public Socket OpenUnix (string path)
-		{
-			UnixEndPoint remoteEndPoint = new UnixEndPoint (path);
+        public Socket OpenUnix(string path)
+        {
+            UnixEndPoint remoteEndPoint = new UnixEndPoint(path);
 
-			Socket client = new Socket (AddressFamily.Unix, SocketType.Stream, 0);
-			client.Connect (remoteEndPoint);
+            Socket client = new Socket(AddressFamily.Unix, SocketType.Stream, 0);
+            client.Connect(remoteEndPoint);
 
-			return client;
-		}
-	}
+            return client;
+        }
+    }
 }

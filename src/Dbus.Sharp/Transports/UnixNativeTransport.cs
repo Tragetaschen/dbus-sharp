@@ -13,31 +13,31 @@ using System.Net.Sockets;
 
 namespace DBus.Transports
 {
-	class UnixNativeTransport : UnixTransport
-	{
-		public override string AuthString ()
-		{
-			long uid = Mono.Unix.Native.Syscall.geteuid ();
-			return uid.ToString ();
-		}
+    class UnixNativeTransport : UnixTransport
+    {
+        public override string AuthString()
+        {
+            long uid = Mono.Unix.Native.Syscall.geteuid();
+            return uid.ToString();
+        }
 
-		public override void Open (string path, bool @abstract)
-		{
-			if (String.IsNullOrEmpty (path))
-				throw new ArgumentException ("path");
+        public override void Open(string path, bool @abstract)
+        {
+            if (String.IsNullOrEmpty(path))
+                throw new ArgumentException("path");
 
-			if (@abstract)
-				path = '\0' + path;
+            if (@abstract)
+                path = '\0' + path;
 
-			var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.IP);
-			socket.Connect(new Mono.Unix.UnixEndPoint(path));
+            var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.IP);
+            socket.Connect(new Mono.Unix.UnixEndPoint(path));
 
-			SocketHandle = (long)socket.Handle;
-			Stream = new NetworkStream(socket, true);
-		}
+            SocketHandle = (long)socket.Handle;
+            Stream = new NetworkStream(socket, true);
+        }
 
-		//send peer credentials null byte
-		//different platforms do this in different ways
+        //send peer credentials null byte
+        //different platforms do this in different ways
 #if HAVE_CMSGCRED
 		unsafe void WriteBsdCred ()
 		{
@@ -66,8 +66,8 @@ namespace DBus.Transports
 		}
 #endif
 
-		public override void WriteCred ()
-		{
+        public override void WriteCred()
+        {
 #if HAVE_CMSGCRED
 			try {
 				WriteBsdCred ();
@@ -77,11 +77,11 @@ namespace DBus.Transports
 					Console.Error.WriteLine ("Warning: WriteBsdCred() failed; falling back to ordinary WriteCred()");
 			}
 #endif
-			//null credentials byte
-			byte buf = 0;
-			Stream.WriteByte (buf);
-		}
-	}
+            //null credentials byte
+            byte buf = 0;
+            Stream.WriteByte(buf);
+        }
+    }
 
 #if HAVE_CMSGCRED
 	unsafe struct msghdr

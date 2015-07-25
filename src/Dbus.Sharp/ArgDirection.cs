@@ -7,9 +7,9 @@ using System;
 
 namespace DBus
 {
-	enum ArgDirection
-	{
-		In,
-		Out,
-	}
+    enum ArgDirection
+    {
+        In,
+        Out,
+    }
 }

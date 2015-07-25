@@ -14,16 +14,9 @@
         "allowUnsafe": true
     },
     "exclude": [
-        "AssemblyInfo.cs",
         "Server.cs",
         "ServerBus.cs",
         "UnixMonoTransport.cs",
         "Daemon.cs"
-    ],
-    "bundleExclude": [
-        "*.mk",
-        "*.dll.config",
-        "gencssources",
-        "*.am"
     ]
 }

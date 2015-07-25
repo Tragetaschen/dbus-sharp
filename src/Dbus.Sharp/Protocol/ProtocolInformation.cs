@@ -7,84 +7,85 @@ using System.Collections.Generic;
 
 namespace DBus.Protocol
 {
-	static class ProtocolInformation
-	{
-		//protocol versions that we support
-		public const byte MinVersion = 0;
-		public const byte Version = 1;
-		public const byte MaxVersion = Version + 1;
+    static class ProtocolInformation
+    {
+        //protocol versions that we support
+        public const byte MinVersion = 0;
+        public const byte Version = 1;
+        public const byte MaxVersion = Version + 1;
 
-		public const uint MaxMessageLength = 134217728; //2 to the 27th power
-		public const uint MaxArrayLength = 67108864; //2 to the 26th power
-		public const uint MaxSignatureLength = 255;
-		public const uint MaxArrayDepth = 32;
-		public const uint MaxStructDepth = 32;
+        public const uint MaxMessageLength = 134217728; //2 to the 27th power
+        public const uint MaxArrayLength = 67108864; //2 to the 26th power
+        public const uint MaxSignatureLength = 255;
+        public const uint MaxArrayDepth = 32;
+        public const uint MaxStructDepth = 32;
 
-		//this is not strictly related to Protocol since names are passed around as strings
-		internal const uint MaxNameLength = 255;
-		internal const uint MaxMatchRuleLength = 1024;
-		internal const uint MaxMatchRuleArgs = 64;
+        //this is not strictly related to Protocol since names are passed around as strings
+        internal const uint MaxNameLength = 255;
+        internal const uint MaxMatchRuleLength = 1024;
+        internal const uint MaxMatchRuleArgs = 64;
 
-		public static int PadNeeded (int pos, int alignment)
-		{
-			int pad = pos % alignment;
-			return pad == 0 ? 0 : alignment - pad;
-		}
+        public static int PadNeeded(int pos, int alignment)
+        {
+            int pad = pos % alignment;
+            return pad == 0 ? 0 : alignment - pad;
+        }
 
-		public static int Padded (int pos, int alignment)
-		{
-			int pad = pos % alignment;
-			if (pad != 0)
-				pos += alignment - pad;
+        public static int Padded(int pos, int alignment)
+        {
+            int pad = pos % alignment;
+            if (pad != 0)
+                pos += alignment - pad;
 
-			return pos;
-		}
+            return pos;
+        }
 
-		public static int GetAlignment (DType dtype)
-		{
-			switch (dtype) {
-				case DType.Byte:
-					return 1;
-				case DType.Boolean:
-					return 4;
-				case DType.Int16:
-				case DType.UInt16:
-					return 2;
-				case DType.Int32:
-				case DType.UInt32:
-					return 4;
-				case DType.Int64:
-				case DType.UInt64:
-					return 8;
+        public static int GetAlignment(DType dtype)
+        {
+            switch (dtype)
+            {
+                case DType.Byte:
+                    return 1;
+                case DType.Boolean:
+                    return 4;
+                case DType.Int16:
+                case DType.UInt16:
+                    return 2;
+                case DType.Int32:
+                case DType.UInt32:
+                    return 4;
+                case DType.Int64:
+                case DType.UInt64:
+                    return 8;
 #if !DISABLE_SINGLE
-				case DType.Single: //Not yet supported!
-					return 4;
+                case DType.Single: //Not yet supported!
+                    return 4;
 #endif
-				case DType.Double:
-					return 8;
-				case DType.String:
-					return 4;
-				case DType.ObjectPath:
-					return 4;
-				case DType.Signature:
-					return 1;
-				case DType.Array:
-					return 4;
-				case DType.StructBegin:
-					return 8;
-				case DType.Variant:
-					return 1;
-				case DType.DictEntryBegin:
-					return 8;
-				case DType.Invalid:
-				default:
-					throw new Exception ("Cannot determine alignment of " + dtype);
-			}
-		}
+                case DType.Double:
+                    return 8;
+                case DType.String:
+                    return 4;
+                case DType.ObjectPath:
+                    return 4;
+                case DType.Signature:
+                    return 1;
+                case DType.Array:
+                    return 4;
+                case DType.StructBegin:
+                    return 8;
+                case DType.Variant:
+                    return 1;
+                case DType.DictEntryBegin:
+                    return 8;
+                case DType.Invalid:
+                default:
+                    throw new Exception("Cannot determine alignment of " + dtype);
+            }
+        }
 
-		//this class may not be the best place for Verbose
-		public readonly static bool Verbose = !String.IsNullOrEmpty (Environment.GetEnvironmentVariable ("DBUS_VERBOSE"));
-	}
+        //this class may not be the best place for Verbose
+        public readonly static bool Verbose = !String.IsNullOrEmpty(Environment.GetEnvironmentVariable("DBUS_VERBOSE"));
+    }
 
 #if UNDOCUMENTED_IN_SPEC
 /*

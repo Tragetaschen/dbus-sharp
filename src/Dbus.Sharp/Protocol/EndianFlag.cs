@@ -7,9 +7,9 @@ using System;
 
 namespace DBus.Protocol
 {
-	public enum EndianFlag : byte
-	{
-		Little = (byte)'l',
-		Big = (byte)'B',
-	}
+    public enum EndianFlag : byte
+    {
+        Little = (byte)'l',
+        Big = (byte)'B',
+    }
 }

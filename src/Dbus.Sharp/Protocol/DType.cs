@@ -7,30 +7,30 @@ using System;
 
 namespace DBus.Protocol
 {
-	public enum DType : byte
-	{
-		Invalid = (byte)'\0',
+    public enum DType : byte
+    {
+        Invalid = (byte)'\0',
 
-		Byte = (byte)'y',
-		Boolean = (byte)'b',
-		Int16 = (byte)'n',
-		UInt16 = (byte)'q',
-		Int32 = (byte)'i',
-		UInt32 = (byte)'u',
-		Int64 = (byte)'x',
-		UInt64 = (byte)'t',
-		Single = (byte)'f', //This is not yet supported!
-		Double = (byte)'d',
-		String = (byte)'s',
-		ObjectPath = (byte)'o',
-		Signature = (byte)'g',
+        Byte = (byte)'y',
+        Boolean = (byte)'b',
+        Int16 = (byte)'n',
+        UInt16 = (byte)'q',
+        Int32 = (byte)'i',
+        UInt32 = (byte)'u',
+        Int64 = (byte)'x',
+        UInt64 = (byte)'t',
+        Single = (byte)'f', //This is not yet supported!
+        Double = (byte)'d',
+        String = (byte)'s',
+        ObjectPath = (byte)'o',
+        Signature = (byte)'g',
 
-		Array = (byte)'a',
-		Variant = (byte)'v',
+        Array = (byte)'a',
+        Variant = (byte)'v',
 
-		StructBegin = (byte)'(',
-		StructEnd = (byte)')',
-		DictEntryBegin = (byte)'{',
-		DictEntryEnd = (byte)'}',
-	}
+        StructBegin = (byte)'(',
+        StructEnd = (byte)')',
+        DictEntryBegin = (byte)'{',
+        DictEntryEnd = (byte)'}',
+    }
 }

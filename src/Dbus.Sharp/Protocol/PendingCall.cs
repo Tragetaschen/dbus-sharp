@@ -7,92 +7,106 @@ using System.Threading;
 
 namespace DBus.Protocol
 {
-	public class PendingCall : IAsyncResult
-	{
-		Connection conn;
-		Message reply;
-		ManualResetEvent waitHandle;
-		bool completedSync;
-		
-		public event Action<Message> Completed;
+    public class PendingCall : IAsyncResult
+    {
+        Connection conn;
+        Message reply;
+        ManualResetEvent waitHandle;
+        bool completedSync;
 
-		public PendingCall (Connection conn)
-		{
-			this.conn = conn;
-		}
+        public event Action<Message> Completed;
 
-		public Message Reply {
-			get {
-				if (reply != null)
-					return reply;
+        public PendingCall(Connection conn)
+        {
+            this.conn = conn;
+        }
 
-				if (Thread.CurrentThread == conn.mainThread) {
-					while (reply == null)
-						conn.HandleMessage (conn.Transport.ReadMessageAsync ().Result);
+        public Message Reply
+        {
+            get
+            {
+                if (reply != null)
+                    return reply;
 
-					completedSync = true;
+                if (Thread.CurrentThread == conn.mainThread)
+                {
+                    while (reply == null)
+                        conn.HandleMessage(conn.Transport.ReadMessageAsync().Result);
 
-					conn.DispatchSignals ();
-				} else {
-					if (waitHandle == null)
-						Interlocked.CompareExchange (ref waitHandle, new ManualResetEvent (false), null);
+                    completedSync = true;
 
-					while (reply == null)
-						waitHandle.WaitOne ();
+                    conn.DispatchSignals();
+                }
+                else
+                {
+                    if (waitHandle == null)
+                        Interlocked.CompareExchange(ref waitHandle, new ManualResetEvent(false), null);
 
-					completedSync = false;
-				}
+                    while (reply == null)
+                        waitHandle.WaitOne();
 
-				return reply;
-			} 
-			set {
-				if (reply != null)
-					throw new Exception ("Cannot handle reply more than once");
+                    completedSync = false;
+                }
 
-				reply = value;
+                return reply;
+            }
+            set
+            {
+                if (reply != null)
+                    throw new Exception("Cannot handle reply more than once");
 
-				if (waitHandle != null)
-					waitHandle.Set ();
+                reply = value;
 
-				if (Completed != null)
-					Completed (reply);
-			}
-		}
+                if (waitHandle != null)
+                    waitHandle.Set();
 
-		public void Cancel ()
-		{
-			throw new NotImplementedException ();
-		}
+                if (Completed != null)
+                    Completed(reply);
+            }
+        }
 
-		#region IAsyncResult Members
+        public void Cancel()
+        {
+            throw new NotImplementedException();
+        }
 
-		object IAsyncResult.AsyncState {
-			get {
-				return conn;
-			}
-		}
+        #region IAsyncResult Members
 
-		WaitHandle IAsyncResult.AsyncWaitHandle {
-			get {
-				if (waitHandle == null)
-					waitHandle = new ManualResetEvent (false);
+        object IAsyncResult.AsyncState
+        {
+            get
+            {
+                return conn;
+            }
+        }
 
-				return waitHandle;
-			}
-		}
+        WaitHandle IAsyncResult.AsyncWaitHandle
+        {
+            get
+            {
+                if (waitHandle == null)
+                    waitHandle = new ManualResetEvent(false);
 
-		bool IAsyncResult.CompletedSynchronously {
-			get {
-				return reply != null && completedSync;
-			}
-		}
+                return waitHandle;
+            }
+        }
 
-		bool IAsyncResult.IsCompleted {
-			get {
-				return reply != null;
-			}
-		}
+        bool IAsyncResult.CompletedSynchronously
+        {
+            get
+            {
+                return reply != null && completedSync;
+            }
+        }
 
-		#endregion
-	}
+        bool IAsyncResult.IsCompleted
+        {
+            get
+            {
+                return reply != null;
+            }
+        }
+
+        #endregion
+    }
 }

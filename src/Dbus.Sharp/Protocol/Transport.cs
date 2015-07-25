@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading;
 using DBus.Protocol;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace DBus.Transports
 {
@@ -147,12 +148,12 @@ namespace DBus.Transports
 				WakeUp (this, EventArgs.Empty);
 		}
 
-		internal Message ReadMessage ()
+		internal async Task<Message> ReadMessageAsync ()
 		{
 			Message msg;
 
 			try {
-				msg = ReadMessageReal ();
+				msg = await ReadMessageRealAsync ();
 			} catch (IOException e) {
 				if (ProtocolInformation.Verbose)
 					Console.Error.WriteLine (e.Message);
@@ -166,11 +167,11 @@ namespace DBus.Transports
 			return msg;
 		}
 
-		int Read (byte[] buffer, int offset, int count)
+		async Task<int> ReadAsync (byte[] buffer, int offset, int count)
 		{
 			int read = 0;
 			while (read < count) {
-				int nread = stream.Read (buffer, offset + read, count - read);
+				int nread = await stream.ReadAsync (buffer, offset + read, count - read);
 				if (nread == 0)
 					break;
 				read += nread;
@@ -182,7 +183,7 @@ namespace DBus.Transports
 			return read;
 		}
 
-		Message ReadMessageReal ()
+		async Task<Message> ReadMessageRealAsync ()
 		{
 			byte[] header = null;
 			byte[] body = null;
@@ -194,7 +195,7 @@ namespace DBus.Transports
 				readBuffer = new byte[16];
 			byte[] hbuf = readBuffer;
 
-			read = Read (hbuf, 0, 16);
+			read = await ReadAsync (hbuf, 0, 16);
 
 			if (read == 0)
 				return null;
@@ -235,7 +236,7 @@ namespace DBus.Transports
 			header = new byte[16 + toRead];
 			Array.Copy (hbuf, header, 16);
 
-			read = Read (header, 16, toRead);
+			read = await ReadAsync (header, 16, toRead);
 
 			if (read != toRead)
 				throw new Exception ("Message header length mismatch: " + read + " of expected " + toRead);
@@ -244,7 +245,7 @@ namespace DBus.Transports
 			if (bodyLen != 0) {
 				body = new byte[bodyLen];
 
-				read = Read (body, 0, bodyLen);
+				read = await ReadAsync (body, 0, bodyLen);
 
 				if (read != bodyLen)
 					throw new Exception ("Message body length mismatch: " + read + " of expected " + bodyLen);

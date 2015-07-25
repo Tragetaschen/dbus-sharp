@@ -10,11 +10,12 @@ using System.Reflection;
 
 namespace DBus
 {
-	using Authentication;
-	using Transports;
-	using Protocol;
+    using Authentication;
+    using Transports;
+    using Protocol;
+    using System.Threading.Tasks;
 
-	public class Connection
+    public class Connection
 	{
 		// Maybe we should use XDG/basedir or check an env var for this?
 		const string machineUuidPath = @"/var/lib/dbus/machine-id";
@@ -216,9 +217,9 @@ namespace DBus
 			}
 		}
 
-		public void Iterate ()
+		public async Task IterateAsync ()
 		{
-			Message msg = transport.ReadMessage ();
+			Message msg = await transport.ReadMessageAsync ();
 
 			HandleMessage (msg);
 			DispatchSignals ();

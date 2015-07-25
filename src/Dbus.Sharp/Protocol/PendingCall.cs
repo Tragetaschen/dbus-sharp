@@ -28,7 +28,7 @@ namespace DBus.Protocol
 
 				if (Thread.CurrentThread == conn.mainThread) {
 					while (reply == null)
-						conn.HandleMessage (conn.Transport.ReadMessage ());
+						conn.HandleMessage (conn.Transport.ReadMessageAsync ().Result);
 
 					completedSync = true;
 

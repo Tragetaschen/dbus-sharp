@@ -2,6 +2,7 @@
 // This software is made available under the MIT License
 // See COPYING for details
 
+using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
@@ -9,10 +10,20 @@ using Mono.Unix;
 
 namespace DBus.Transports
 {
-    class UnixMonoTransport : UnixTransport
+    internal class SocketTransport : Transport
     {
-        public override void Open(string path, bool isAbstract)
+        public override void Open(AddressEntry entry)
         {
+            string path;
+            bool isAbstract;
+
+            if (entry.Properties.TryGetValue("path", out path))
+                isAbstract = false;
+            else if (entry.Properties.TryGetValue("abstract", out path))
+                isAbstract = true;
+            else
+                throw new ArgumentException("No path specified for UNIX transport");
+
             EndPoint ep;
 
             if (isAbstract)
@@ -25,8 +36,6 @@ namespace DBus.Transports
             Stream = new NetworkStream(client);
         }
 
-        //send peer credentials null byte. note that this might not be portable
-        //there are also selinux, BSD etc. considerations
         public override void WriteCred()
         {
             Stream.WriteByte(0);

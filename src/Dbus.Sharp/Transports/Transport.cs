@@ -34,7 +34,7 @@ namespace DBus.Transports
             {
                 case "tcp":
                     {
-                        Transport transport = new SocketTransport();
+                        Transport transport = new TcpTransport();
                         transport.Open(entry);
                         return transport;
                     }
@@ -43,7 +43,7 @@ namespace DBus.Transports
                     {
                         if (OSHelpers.PlatformIsUnixoid)
                         {
-                            Transport transport = new UnixMonoTransport();
+                            Transport transport = new SocketTransport();
                             transport.Open(entry);
                             return transport;
                         }

@@ -4,15 +4,13 @@
 
 using System;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
+using Mono.Unix;
 
 namespace DBus.Transports
 {
-    class SocketTransport : Transport
+    class TcpTransport : Transport
     {
-        internal Socket socket;
-
         public override void Open(AddressEntry entry)
         {
             string host, portStr, family;
@@ -42,19 +40,9 @@ namespace DBus.Transports
 			client.ReceiveBufferSize = (int)Protocol.MaxMessageLength;
 			client.SendBufferSize = (int)Protocol.MaxMessageLength;
 			*/
-            this.socket = client.Client;
+            var socket = client.Client;
             SocketHandle = (long)client.Client.Handle;
             Stream = client.GetStream();
-        }
-
-        public void Open(Socket socket)
-        {
-            this.socket = socket;
-
-            socket.Blocking = true;
-            SocketHandle = (long)socket.Handle;
-            //Stream = new UnixStream ((int)socket.Handle);
-            Stream = new NetworkStream(socket);
         }
 
         public override void WriteCred()
@@ -64,8 +52,8 @@ namespace DBus.Transports
 
         public override string AuthString()
         {
-            return OSHelpers.PlatformIsUnixoid ?
-                Mono.Unix.Native.Syscall.geteuid().ToString()                       // Unix User ID
+            return OSHelpers.PlatformIsUnixoid
+                ? UnixUserInfo.GetRealUserId().ToString()
                 : System.Security.Principal.WindowsIdentity.GetCurrent().User.Value; // Windows User ID
         }
     }

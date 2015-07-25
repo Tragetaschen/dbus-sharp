@@ -16,7 +16,6 @@
     "exclude": [
         "Server.cs",
         "ServerBus.cs",
-        "UnixMonoTransport.cs",
         "Daemon.cs"
     ]
 }

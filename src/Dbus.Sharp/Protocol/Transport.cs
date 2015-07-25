@@ -43,7 +43,7 @@ namespace DBus.Transports
                     {
                         if (OSHelpers.PlatformIsUnixoid)
                         {
-                            Transport transport = new UnixNativeTransport();
+                            Transport transport = new UnixMonoTransport();
                             transport.Open(entry);
                             return transport;
                         }

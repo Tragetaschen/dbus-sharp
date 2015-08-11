@@ -111,7 +111,7 @@ namespace Dbus.Sharp
             foreach (var member in allMembers)
                 member.Accept(visitor);
 
-            builder.AppendLine(visitor.Methods.ToString());
+            builder.AppendLine(visitor.BuildImplementations());
 
             builder.AppendLine("}");
             builder.AppendLine("");
@@ -126,8 +126,9 @@ namespace Dbus.Sharp
         private class memberVisitor : SymbolVisitor
         {
             private readonly string interfaceName;
-
-            public StringBuilder Methods = new StringBuilder();
+            private readonly Dictionary<string, getterAndSetter> properties = new Dictionary<string, getterAndSetter>();
+            private readonly Dictionary<string, getterAndSetter> events = new Dictionary<string, getterAndSetter>();
+            private readonly Dictionary<string, string> methods = new Dictionary<string, string>();
 
             public memberVisitor(string interfaceName)
             {
@@ -136,24 +137,87 @@ namespace Dbus.Sharp
 
             public override void VisitMethod(IMethodSymbol symbol)
             {
-                if (symbol.Name.StartsWith("get_") ||
-                    symbol.Name.StartsWith("set_") ||
-                    symbol.Name.StartsWith("add_") ||
-                    symbol.Name.StartsWith("remove_"))
+                if (symbol.Name.StartsWith("add_") ||
+                                    symbol.Name.StartsWith("remove_"))
+                {
+                    Console.WriteLine("Omitting " + symbol);
                     return;
+                }
 
-                var builder = new StringBuilder();
                 var returnTypeString = symbol.ReturnType.ToString();
 
-                builder.Append("public ");
-                builder.Append(returnTypeString);
-                builder.Append(" ");
-                builder.Append(symbol.Name);
-                builder.Append("(");
-                builder.Append(string.Join(", ", symbol.Parameters
-                    .Select(x => x.Type + " " + x.Name)
-                ));
-                builder.AppendLine(")");
+                if (symbol.Name.StartsWith("get_") ||
+                    symbol.Name.StartsWith("set_"))
+                {
+                    var propertyName = symbol.Name.Substring(4);
+                    var methodSignature =
+                        "public " +
+                        returnTypeString +
+                        " " +
+                        propertyName
+                    ;
+                    Console.WriteLine(methodSignature);
+                    if (!properties.ContainsKey(methodSignature))
+                        properties.Add(methodSignature, new getterAndSetter());
+                    if (symbol.Name.StartsWith("get_"))
+                    {
+                        var body = generateBody(symbol, returnTypeString, "Get" + propertyName);
+                        properties[methodSignature].Getter = body;
+                    }
+                    else
+                    {
+                        var body = generateBody(symbol, returnTypeString, "Set" + propertyName);
+                        properties[methodSignature].Setter = body;
+                    }
+                }
+                else
+                {
+                    var methodSignature =
+                        "public " +
+                        returnTypeString +
+                        " " +
+                        symbol.Name +
+                        "(" +
+                        string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
+                        ")"
+                    ;
+                    var body = generateBody(symbol, returnTypeString, symbol.Name);
+                    methods[methodSignature] = body;
+                }
+            }
+
+            public string BuildImplementations()
+            {
+                var builder = new StringBuilder();
+                foreach (var property in properties)
+                {
+                    builder.AppendLine(property.Key);
+                    builder.AppendLine("{");
+                    if (property.Value.Getter != null)
+                    {
+                        builder.AppendLine("get");
+                        builder.AppendLine(property.Value.Getter);
+                    }
+                    if (property.Value.Setter != null)
+                    {
+                        builder.AppendLine("set");
+                        builder.AppendLine(property.Value.Setter);
+                    }
+                    builder.AppendLine("}");
+                }
+
+                foreach (var method in methods)
+                {
+                    builder.AppendLine(method.Key);
+                    builder.AppendLine(method.Value);
+                }
+
+                return builder.ToString();
+            }
+
+            private string generateBody(IMethodSymbol symbol, string returnTypeString, string methodName)
+            {
+                var builder = new StringBuilder();
                 builder.AppendLine("{");
 
                 builder.AppendLine("var writer = new DBus.Protocol.MessageWriter();");
@@ -167,7 +231,7 @@ namespace Dbus.Sharp
                     builder.Append("var reader = ");
                 builder.Append("SendMethodCall(");
                 builder.Append("\"" + interfaceName + "\", ");
-                builder.Append("\"" + symbol.Name + "\", ");
+                builder.Append("\"" + methodName + "\", ");
                 builder.Append("\"" + signatureIn.Value + "\", ");
                 builder.Append("writer, ");
                 builder.Append("typeof(" + returnTypeString + "), ");
@@ -186,7 +250,7 @@ namespace Dbus.Sharp
 
                 builder.AppendLine("}");
 
-                Methods.AppendLine(builder.ToString());
+                return builder.ToString();
             }
         }
 
@@ -201,6 +265,12 @@ namespace Dbus.Sharp
             }
 
             signatureOut += Signature.GetSig(mi.ReturnType);
+        }
+
+        private class getterAndSetter
+        {
+            public string Getter;
+            public string Setter;
         }
     }
 }

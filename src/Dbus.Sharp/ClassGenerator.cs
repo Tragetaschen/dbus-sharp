@@ -158,6 +158,33 @@ namespace Dbus.Sharp
                 }
             }
 
+            public override void VisitEvent(IEventSymbol symbol)
+            {
+                var signature =
+                    "public event " +
+                    symbol.Type.ToString() +
+                    " " +
+                    symbol.Name
+                ;
+                events.Add(signature, new getterAndSetter());
+                events[signature].Getter = buildEvent(false, symbol.Name);
+                events[signature].Setter = buildEvent(true, symbol.Name);
+            }
+
+            private string buildEvent(bool isAdder, string eventName)
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine("{");
+                builder.Append("ToggleSignal(");
+                builder.Append("\"" + interfaceName + "\", ");
+                builder.Append("\"" + eventName + "\", ");
+                builder.Append("value, ");
+                builder.Append(isAdder ? "true" : "false");
+                builder.AppendLine(");");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
             public override void VisitMethod(IMethodSymbol symbol)
             {
                 if (symbol.MethodKind != MethodKind.Ordinary)
@@ -193,6 +220,17 @@ namespace Dbus.Sharp
                         builder.AppendLine("set");
                         builder.AppendLine(property.Value.Setter);
                     }
+                    builder.AppendLine("}");
+                }
+
+                foreach (var e in events)
+                {
+                    builder.AppendLine(e.Key);
+                    builder.AppendLine("{");
+                    builder.AppendLine("add");
+                    builder.AppendLine(e.Value.Setter);
+                    builder.AppendLine("remove");
+                    builder.AppendLine(e.Value.Getter);
                     builder.AppendLine("}");
                 }
 

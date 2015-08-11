@@ -8,7 +8,9 @@
         "dnx451": {
             "frameworkAssemblies": {
               "System.Xml": "4.0.0.0",
-              "System.Runtime": ""
+              "System.Runtime": "",
+              "System.Text.Encoding": "",
+              "System.Threading.Tasks": ""
             }
         }
     },

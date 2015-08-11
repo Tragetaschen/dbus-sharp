@@ -8,6 +8,7 @@ using System.Text;
 using System.Collections.Generic;
 //TODO: Reflection should be done at a higher level than this class
 using System.Reflection;
+using Microsoft.CodeAnalysis;
 
 namespace DBus.Protocol
 {
@@ -596,6 +597,47 @@ namespace DBus.Protocol
             return ret;
         }
 
+        internal static DType TypeCodeToDType(ITypeSymbol type)
+        {
+            switch (type.SpecialType)
+            {
+                case SpecialType.System_Object:
+                    return DType.Invalid;
+                case SpecialType.System_Boolean:
+                    return DType.Boolean;
+                case SpecialType.System_Char:
+                    return DType.UInt16;
+                case SpecialType.System_SByte:
+                    return DType.Byte;
+                case SpecialType.System_Byte:
+                    return DType.Byte;
+                case SpecialType.System_Int16:
+                    return DType.Int16;
+                case SpecialType.System_UInt16:
+                    return DType.UInt16;
+                case SpecialType.System_Int32:
+                    return DType.Int32;
+                case SpecialType.System_UInt32:
+                    return DType.UInt32;
+                case SpecialType.System_Int64:
+                    return DType.Int64;
+                case SpecialType.System_UInt64:
+                    return DType.UInt64;
+                case SpecialType.System_Single:
+                    return DType.Single;
+                case SpecialType.System_Double:
+                    return DType.Double;
+                case SpecialType.System_Decimal:
+                    return DType.Invalid;
+                case SpecialType.System_DateTime:
+                    return DType.Invalid;
+                case SpecialType.System_String:
+                    return DType.String;
+                default:
+                    return DType.Invalid;
+            }
+        }
+
         internal static DType TypeCodeToDType(TypeCode typeCode)
         {
             switch (typeCode)
@@ -639,6 +681,49 @@ namespace DBus.Protocol
                 default:
                     return DType.Invalid;
             }
+        }
+
+        internal static DType TypeToDType(ITypeSymbol type)
+        {
+            var typeString = type.ToString();
+            var specialType = type.SpecialType;
+
+            if (specialType == SpecialType.System_Void)
+                return DType.Invalid;
+
+            if (specialType == SpecialType.System_String)
+                return DType.String;
+
+            if (typeString == "DBus.ObjectPath")
+                return DType.ObjectPath;
+
+            if (typeString == "DBus.Protocol.Signature")
+                return DType.Signature;
+
+            if (specialType == SpecialType.System_Object)
+                return DType.Variant;
+
+            var primitive = TypeCodeToDType(type);
+            if (primitive != DType.Invalid)
+                return primitive;
+
+            if (type.TypeKind == TypeKind.Enum)
+                return TypeToDType(type.BaseType);
+
+            //needs work
+            if (type.TypeKind == TypeKind.Array)
+                return DType.Array;
+
+            //if (type.UnderlyingSystemType != null)
+            //	return TypeToDType (type.UnderlyingSystemType);
+            if (Mapper.IsPublic(type))
+                return DType.ObjectPath;
+
+            //if (type. !type.IsPrimitive && !type.IsEnum)
+            return DType.StructBegin;
+
+            //TODO: maybe throw an exception here
+            //throw new InvalidOperationException("Unsupported type");
         }
 
         //FIXME: this method is bad, get rid of it
@@ -881,6 +966,69 @@ namespace DBus.Protocol
                 sig += GetSig(type);
 
             return sig;
+        }
+
+        public static Signature GetSig(ITypeSymbol type)
+        {
+            if (type == null)
+                throw new ArgumentNullException("type");
+
+            var typeString = type.ToString();
+
+            //this is inelegant, but works for now
+            if (typeString == "DBus.Protocol.Signature")
+                return Signature.SignatureSig;
+
+            if (typeString == "DBus.ObjectPath")
+                return Signature.ObjectPathSig;
+
+            if (type.SpecialType == SpecialType.System_Void)
+                return Signature.Empty;
+
+            if (type.SpecialType == SpecialType.System_String)
+                return Signature.StringSig;
+
+            if (type.SpecialType == SpecialType.System_Object)
+                return Signature.VariantSig;
+
+            if (type.TypeKind == TypeKind.Array)
+                return MakeArray(GetSig(((IArrayTypeSymbol)type).ElementType));
+
+            var namedType = type as INamedTypeSymbol;
+            if (typeString.StartsWith("System.Collections.Generic.Dictionary<") ||
+                typeString.StartsWith("System.Collections.Generic.IDictionary<"))
+            {
+
+                var genArgs = namedType.TypeArguments;
+                return Signature.MakeDict(GetSig(genArgs[0]), GetSig(genArgs[1]));
+            }
+
+            if (Mapper.IsPublic(type))
+            {
+                return Signature.ObjectPathSig;
+            }
+            if (type.IsReferenceType) // TODO: Hmm… !type.IsPrimitive && !type.IsEnum)
+            {
+                var visitor = new fieldVisitor();
+                foreach (var member in type.GetMembers())
+                    member.Accept(visitor);
+                return Signature.MakeStruct(visitor.Sig);
+            }
+
+            DType dtype = Signature.TypeToDType(type);
+            return new Signature(dtype);
+        }
+
+        private class fieldVisitor : SymbolVisitor
+        {
+            public Signature Sig = Signature.Empty;
+
+            public override void VisitField(IFieldSymbol symbol)
+            {
+                if (symbol.IsStatic)
+                    return;
+                Sig += GetSig(symbol.Type);
+            }
         }
 
         public static Signature GetSig(Type type)

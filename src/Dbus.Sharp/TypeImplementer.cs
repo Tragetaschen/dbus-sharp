@@ -11,7 +11,7 @@ namespace DBus
 {
     using Protocol;
 
-    class TypeImplementer
+    public class TypeImplementer
     {
         public static readonly TypeImplementer Root = new TypeImplementer("DBus.Proxies", false);
         AssemblyBuilder asmB;
@@ -46,6 +46,12 @@ namespace DBus
             asmB = AppDomain.CurrentDomain.DefineDynamicAssembly(new AssemblyName(name),
                                                                   canSave ? AssemblyBuilderAccess.RunAndSave : AssemblyBuilderAccess.Run);
             modB = asmB.DefineDynamicModule(name);
+        }
+
+        public void SetImplementation(Type declType, Type implType)
+        {
+            lock(getImplLock)
+                map[declType] = implType;
         }
 
         public Type GetImplementation(Type declType)
@@ -595,7 +601,7 @@ namespace DBus
         }
     }
 
-    internal delegate void TypeWriter<T>(MessageWriter writer, T value);
+    public delegate void TypeWriter<T>(MessageWriter writer, T value);
 
     internal delegate void MethodCaller(object instance, MessageReader rdr, Message msg, MessageWriter ret);
 }

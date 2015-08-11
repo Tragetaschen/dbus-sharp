@@ -63,10 +63,10 @@ namespace org.freedesktop.DBus
     public interface Properties
     {
         [return: Argument("value")]
-        object Get(string @interface, string propname);
-        void Set(string @interface, string propname, object value);
+        object Get(string interfaceName, string propname);
+        void Set(string interfaceName, string propname, object value);
         [return: Argument("props")]
-        IDictionary<string, object> GetAll(string @interface);
+        IDictionary<string, object> GetAll(string interfaceName);
     }
 
     [Interface("org.freedesktop.DBus")]

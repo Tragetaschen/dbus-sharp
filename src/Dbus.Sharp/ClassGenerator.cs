@@ -135,55 +135,45 @@ namespace Dbus.Sharp
                 this.interfaceName = interfaceName;
             }
 
-            public override void VisitMethod(IMethodSymbol symbol)
+            public override void VisitProperty(IPropertySymbol symbol)
             {
-                if (symbol.Name.StartsWith("add_") ||
-                                    symbol.Name.StartsWith("remove_"))
+                var propertyName = symbol.Name;
+                var returnTypeString = symbol.Type.ToString();
+                var methodSignature =
+                    "public " +
+                    returnTypeString +
+                    " " +
+                    propertyName
+                ;
+                properties.Add(methodSignature, new getterAndSetter());
+                if (symbol.GetMethod != null)
                 {
-                    Console.WriteLine("Omitting " + symbol);
-                    return;
-                }
-
-                var returnTypeString = symbol.ReturnType.ToString();
-
-                if (symbol.Name.StartsWith("get_") ||
-                    symbol.Name.StartsWith("set_"))
-                {
-                    var propertyName = symbol.Name.Substring(4);
-                    var methodSignature =
-                        "public " +
-                        returnTypeString +
-                        " " +
-                        propertyName
-                    ;
-                    Console.WriteLine(methodSignature);
-                    if (!properties.ContainsKey(methodSignature))
-                        properties.Add(methodSignature, new getterAndSetter());
-                    if (symbol.Name.StartsWith("get_"))
-                    {
-                        var body = generateBody(symbol, returnTypeString, "Get" + propertyName);
-                        properties[methodSignature].Getter = body;
-                    }
-                    else
-                    {
-                        var body = generateBody(symbol, returnTypeString, "Set" + propertyName);
-                        properties[methodSignature].Setter = body;
-                    }
+                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Get" + propertyName);
+                    properties[methodSignature].Getter = body;
                 }
                 else
                 {
-                    var methodSignature =
-                        "public " +
-                        returnTypeString +
-                        " " +
-                        symbol.Name +
-                        "(" +
-                        string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
-                        ")"
-                    ;
-                    var body = generateBody(symbol, returnTypeString, symbol.Name);
-                    methods[methodSignature] = body;
+                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Set" + propertyName);
+                    properties[methodSignature].Setter = body;
                 }
+            }
+
+            public override void VisitMethod(IMethodSymbol symbol)
+            {
+                if (symbol.MethodKind != MethodKind.Ordinary)
+                    return;
+
+                var methodSignature =
+                    "public " +
+                    symbol.ReturnType.ToString() +
+                    " " +
+                    symbol.Name +
+                    "(" +
+                    string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
+                    ")"
+                ;
+                var body = generateBody(symbol.Parameters, symbol.ReturnType, symbol.Name);
+                methods[methodSignature] = body;
             }
 
             public string BuildImplementations()
@@ -215,8 +205,9 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            private string generateBody(IMethodSymbol symbol, string returnTypeString, string methodName)
+            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName)
             {
+                var returnTypeString = returnType.ToString();
                 var builder = new StringBuilder();
                 builder.AppendLine("{");
 
@@ -225,9 +216,9 @@ namespace Dbus.Sharp
 
                 Signature signatureIn;
                 Signature signatureOut;
-                sigsForMethod(symbol, out signatureIn, out signatureOut);
+                sigsForMethod(parameters, returnType, out signatureIn, out signatureOut);
 
-                if (symbol.ReturnType.SpecialType != SpecialType.System_Void)
+                if (returnTypeString != "void")
                     builder.Append("var reader = ");
                 builder.Append("SendMethodCall(");
                 builder.Append("\"" + interfaceName + "\", ");
@@ -241,7 +232,7 @@ namespace Dbus.Sharp
                 builder.AppendLine("if (exception != null)");
                 builder.AppendLine(" throw exception;");
 
-                if (symbol.ReturnType.SpecialType == SpecialType.System_Void)
+                if (returnTypeString == "void")
                     builder.AppendLine("return;");
                 else
                 {
@@ -254,17 +245,17 @@ namespace Dbus.Sharp
             }
         }
 
-        private static void sigsForMethod(IMethodSymbol mi, out Signature signatureIn, out Signature signatureOut)
+        private static void sigsForMethod(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, out Signature signatureIn, out Signature signatureOut)
         {
             signatureIn = Signature.Empty;
             signatureOut = Signature.Empty;
 
-            foreach (var parameter in mi.Parameters)
+            foreach (var parameter in parameters)
             {
                 signatureIn += Signature.GetSig(parameter.Type);
             }
 
-            signatureOut += Signature.GetSig(mi.ReturnType);
+            signatureOut += Signature.GetSig(returnType);
         }
 
         private class getterAndSetter

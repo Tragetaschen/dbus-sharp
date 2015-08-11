@@ -708,7 +708,7 @@ namespace DBus.Protocol
                 return primitive;
 
             if (type.TypeKind == TypeKind.Enum)
-                return TypeToDType(type.BaseType);
+                return TypeToDType(((INamedTypeSymbol)type).EnumUnderlyingType);
 
             //needs work
             if (type.TypeKind == TypeKind.Array)

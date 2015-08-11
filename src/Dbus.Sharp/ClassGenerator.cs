@@ -17,21 +17,22 @@ namespace Dbus.Sharp
         public void BeforeCompile(BeforeCompileContext context)
         {
             var result = generateClasses(context);
-            System.IO.File.WriteAllText("generated.txt", result);
+            var syntaxTree = SyntaxFactory.ParseSyntaxTree(result);
+            System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
             context.Compilation = context.Compilation.AddSyntaxTrees(
-                SyntaxFactory.ParseSyntaxTree(result)
+                syntaxTree
             );
             Console.WriteLine("I was running");
         }
 
         private string generateClasses(BeforeCompileContext context)
         {
-            var result = "namespace " + context.ProjectContext.Name + "\n{\n";
+            var result = "namespace " + context.ProjectContext.Name + "{";
 
             result += recurseNamespace(context.Compilation.GlobalNamespace);
             result += createInit();
 
-            result += "}\n";
+            result += "}";
 
             return result;
         }

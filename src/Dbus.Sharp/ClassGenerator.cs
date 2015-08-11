@@ -98,7 +98,7 @@ namespace Dbus.Sharp
             implementations.Add(type.ToString(), "Generated" + type.Name);
 
             var builder = new StringBuilder();
-            builder.AppendLine("internal class Generated" + type.Name + ": DBus.BusObject");
+            builder.AppendLine("internal class Generated" + type.Name + ": DBus.BusObject, " + type.ToString());
             builder.AppendLine("{");
             var allMembers = type
                 .GetMembers()

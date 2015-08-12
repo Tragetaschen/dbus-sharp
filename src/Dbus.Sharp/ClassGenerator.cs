@@ -285,7 +285,18 @@ namespace Dbus.Sharp
                     builder.AppendLine("return;");
                 else
                 {
-                    builder.AppendLine("return (" + returnTypeString + ")reader.ReadValue(typeof(" + returnTypeString + "));");
+                    if (returnTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
+                        returnTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
+                    {
+                        var typeArguments = ((INamedTypeSymbol)returnType).TypeArguments;
+                        builder.Append("return reader.ReadDictionary<");
+                        builder.Append(typeArguments[0].ToString());
+                        builder.Append(",");
+                        builder.Append(typeArguments[1].ToString());
+                        builder.AppendLine(">();");
+                    }
+                    else
+                        builder.AppendLine("return (" + returnTypeString + ")reader.ReadValue(typeof(" + returnTypeString + "));");
                 }
 
                 builder.AppendLine("}");

@@ -27,12 +27,13 @@ namespace Dbus.Sharp
 
         private string generateClasses(BeforeCompileContext context)
         {
-            var result = "namespace " + context.ProjectContext.Name + "{";
+            var result = "namespace " + context.ProjectContext.Name + " {";
+            result += "internal static class Dbus {";
 
             result += recurseNamespace(context.Compilation.GlobalNamespace);
             result += createInit();
 
-            result += "}";
+            result += "}}";
 
             return result;
         }
@@ -40,8 +41,6 @@ namespace Dbus.Sharp
         private string createInit()
         {
             var builder = new StringBuilder();
-            builder.AppendLine("public static class DbusInitializer");
-            builder.AppendLine("{");
             builder.AppendLine("public static void Init()");
             builder.AppendLine("{");
             foreach (var implementation in implementations)
@@ -54,7 +53,6 @@ namespace Dbus.Sharp
                 builder.Append(")");
                 builder.AppendLine(");");
             }
-            builder.AppendLine("}");
             builder.AppendLine("}");
 
             return builder.ToString();
@@ -96,7 +94,7 @@ namespace Dbus.Sharp
             implementations.Add(type.ToString(), "Generated" + type.Name);
 
             var builder = new StringBuilder();
-            builder.AppendLine("internal class Generated" + type.Name + ": DBus.BusObject, " + type.ToString());
+            builder.AppendLine("private class Generated" + type.Name + ": DBus.BusObject, " + type.ToString());
             builder.AppendLine("{");
             var allMembers = type
                 .GetMembers()

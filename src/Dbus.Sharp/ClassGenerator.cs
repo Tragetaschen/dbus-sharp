@@ -84,12 +84,9 @@ namespace Dbus.Sharp
                 return result;
 
             if (interfaceAttributeArgument.HasValue)
-            {
-                //if (type.Name == "IBluezAdapter")
                 result += generateCodeFor(type, (string)interfaceAttributeArgument.Value.Value);
-                foreach (var subType in type.GetTypeMembers())
-                    result += handleType(subType);
-            }
+            foreach (var subType in type.GetTypeMembers())
+                result += handleType(subType);
 
             return result;
         }

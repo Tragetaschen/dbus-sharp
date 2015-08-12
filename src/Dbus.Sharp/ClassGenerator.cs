@@ -251,6 +251,16 @@ namespace Dbus.Sharp
                 builder.AppendLine("{");
 
                 builder.AppendLine("var writer = new DBus.Protocol.MessageWriter();");
+
+                foreach (var parameter in parameters)
+                {
+                    builder.Append("writer.Write(typeof(");
+                    builder.Append(parameter.Type.ToString());
+                    builder.Append("), ");
+                    builder.Append(parameter.Name);
+                    builder.AppendLine(");");
+                }
+
                 builder.AppendLine("System.Exception exception;");
 
                 Signature signatureIn;

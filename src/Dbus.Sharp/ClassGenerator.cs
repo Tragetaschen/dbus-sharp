@@ -18,11 +18,11 @@ namespace Dbus.Sharp
         {
             var result = generateClasses(context);
             var syntaxTree = SyntaxFactory.ParseSyntaxTree(result);
-            System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
+            //System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
             context.Compilation = context.Compilation.AddSyntaxTrees(
                 syntaxTree
             );
-            Console.WriteLine("I was running");
+            //Console.WriteLine("I was running");
         }
 
         private string generateClasses(BeforeCompileContext context)

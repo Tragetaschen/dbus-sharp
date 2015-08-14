@@ -10,6 +10,7 @@ using System.Collections.Generic;
 namespace DBus
 {
     using Protocol;
+    using System.Threading.Tasks;
 
     public class BusObject
     {
@@ -108,14 +109,13 @@ namespace DBus
             conn.Send(signalMsg);
         }
 
-        public MessageReader SendMethodCall(string iface, string member, string inSigStr, MessageWriter writer, Type retType, out Exception exception)
+        public async Task<MessageReader> SendMethodCall(string iface, string member, string inSigStr, MessageWriter writer, Type retType)
         {
             if (string.IsNullOrEmpty(bus_name))
                 throw new ArgumentNullException("bus_name");
             if (object_path == null)
                 throw new ArgumentNullException("object_path");
 
-            exception = null;
             Signature inSig = String.IsNullOrEmpty(inSigStr) ? Signature.Empty : new Signature(inSigStr);
 
             MessageContainer method_call = new MessageContainer
@@ -148,7 +148,7 @@ namespace DBus
 			}
 #endif
 
-            Message retMsg = conn.SendWithReplyAndBlock(callMsg);
+            Message retMsg = await conn.SendWithReplyAndBlock(callMsg);
 
             MessageReader retVal = null;
 
@@ -166,8 +166,7 @@ namespace DBus
                         MessageReader reader = new MessageReader(retMsg);
                         errMsg = reader.ReadString();
                     }
-                    exception = new Exception(error.ErrorName + ": " + errMsg);
-                    break;
+                    throw new Exception(error.ErrorName + ": " + errMsg);
                 default:
                     throw new Exception("Got unexpected message of type " + retMsg.Header.MessageType + " while waiting for a MethodReturn or Error");
             }
@@ -215,7 +214,15 @@ namespace DBus
                     writer.Write(inTypes[i], inArgs[i]);
             }
 
-            MessageReader reader = SendMethodCall(iface, methodName, inSig.Value, writer, mi.ReturnType, out exception);
+            MessageReader reader = null;
+            try
+            {
+                reader = SendMethodCall(iface, methodName, inSig.Value, writer, mi.ReturnType).Result;
+            }
+            catch(Exception e)
+            {
+                exception = e;
+            }
             if (reader == null)
                 return;
 

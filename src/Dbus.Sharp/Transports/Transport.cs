@@ -162,13 +162,13 @@ namespace DBus.Transports
                 WakeUp(this, EventArgs.Empty);
         }
 
-        internal async Task<Message> ReadMessageAsync()
+        internal Message ReadMessage()
         {
             Message msg;
 
             try
             {
-                msg = await ReadMessageRealAsync();
+                msg = ReadMessageReal();
             }
             catch (IOException e)
             {
@@ -184,12 +184,12 @@ namespace DBus.Transports
             return msg;
         }
 
-        async Task<int> ReadAsync(byte[] buffer, int offset, int count)
+        int Read(byte[] buffer, int offset, int count)
         {
             int read = 0;
             while (read < count)
             {
-                int nread = await stream.ReadAsync(buffer, offset + read, count - read);
+                int nread = stream.Read(buffer, offset + read, count - read);
                 if (nread == 0)
                     break;
                 read += nread;
@@ -201,7 +201,7 @@ namespace DBus.Transports
             return read;
         }
 
-        async Task<Message> ReadMessageRealAsync()
+        Message ReadMessageReal()
         {
             byte[] header = null;
             byte[] body = null;
@@ -213,7 +213,7 @@ namespace DBus.Transports
                 readBuffer = new byte[16];
             byte[] hbuf = readBuffer;
 
-            read = await ReadAsync(hbuf, 0, 16);
+            read = Read(hbuf, 0, 16);
 
             if (read == 0)
                 return null;
@@ -254,7 +254,7 @@ namespace DBus.Transports
             header = new byte[16 + toRead];
             Array.Copy(hbuf, header, 16);
 
-            read = await ReadAsync(header, 16, toRead);
+            read = Read(header, 16, toRead);
 
             if (read != toRead)
                 throw new Exception("Message header length mismatch: " + read + " of expected " + toRead);
@@ -264,7 +264,7 @@ namespace DBus.Transports
             {
                 body = new byte[bodyLen];
 
-                read = await ReadAsync(body, 0, bodyLen);
+                read = Read(body, 0, bodyLen);
 
                 if (read != bodyLen)
                     throw new Exception("Message body length mismatch: " + read + " of expected " + bodyLen);

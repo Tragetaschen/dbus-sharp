@@ -2,111 +2,40 @@
 // This software is made available under the MIT License
 // See COPYING for details
 
-using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace DBus.Protocol
 {
-    public class PendingCall : IAsyncResult
+    public class PendingCall
     {
-        Connection conn;
-        Message reply;
-        ManualResetEvent waitHandle;
-        bool completedSync;
-
-        public event Action<Message> Completed;
+        private TaskCompletionSource<Message> tcs;
+        private Connection conn;
 
         public PendingCall(Connection conn)
         {
             this.conn = conn;
+            tcs = new TaskCompletionSource<Message>();
         }
 
-        public Message Reply
+        public Task<Message> GetReply()
         {
-            get
+            var task = tcs.Task;
+
+            if (Thread.CurrentThread == conn.mainThread)
             {
-                if (reply != null)
-                    return reply;
+                while (!task.IsCompleted)
+                    conn.HandleMessage(conn.Transport.ReadMessage());
 
-                if (Thread.CurrentThread == conn.mainThread)
-                {
-                    while (reply == null)
-                        conn.HandleMessage(conn.Transport.ReadMessageAsync().Result);
-
-                    completedSync = true;
-
-                    conn.DispatchSignals();
-                }
-                else
-                {
-                    if (waitHandle == null)
-                        Interlocked.CompareExchange(ref waitHandle, new ManualResetEvent(false), null);
-
-                    while (reply == null)
-                        waitHandle.WaitOne();
-
-                    completedSync = false;
-                }
-
-                return reply;
+                conn.DispatchSignals();
             }
-            set
-            {
-                if (reply != null)
-                    throw new Exception("Cannot handle reply more than once");
 
-                reply = value;
-
-                if (waitHandle != null)
-                    waitHandle.Set();
-
-                if (Completed != null)
-                    Completed(reply);
-            }
+            return task;
         }
 
-        public void Cancel()
+        public void SetReply(Message value)
         {
-            throw new NotImplementedException();
+            tcs.SetResult(value);
         }
-
-        #region IAsyncResult Members
-
-        object IAsyncResult.AsyncState
-        {
-            get
-            {
-                return conn;
-            }
-        }
-
-        WaitHandle IAsyncResult.AsyncWaitHandle
-        {
-            get
-            {
-                if (waitHandle == null)
-                    waitHandle = new ManualResetEvent(false);
-
-                return waitHandle;
-            }
-        }
-
-        bool IAsyncResult.CompletedSynchronously
-        {
-            get
-            {
-                return reply != null && completedSync;
-            }
-        }
-
-        bool IAsyncResult.IsCompleted
-        {
-            get
-            {
-                return reply != null;
-            }
-        }
-
-        #endregion
     }
 }

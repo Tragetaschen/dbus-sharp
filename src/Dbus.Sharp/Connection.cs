@@ -185,10 +185,10 @@ namespace DBus
             return (uint)Interlocked.Increment(ref serial);
         }
 
-        internal Message SendWithReplyAndBlock(Message msg)
+        internal async Task<Message> SendWithReplyAndBlock(Message msg)
         {
             PendingCall pending = SendWithReply(msg);
-            return pending.Reply;
+            return await pending.GetReply();
         }
 
         internal PendingCall SendWithReply(Message msg)
@@ -232,9 +232,9 @@ namespace DBus
             }
         }
 
-        public async Task IterateAsync()
+        public void Iterate()
         {
-            Message msg = await transport.ReadMessageAsync();
+            var msg = transport.ReadMessage();
 
             HandleMessage(msg);
             DispatchSignals();
@@ -263,7 +263,7 @@ namespace DBus
                         if (pendingCalls.TryGetValue(reply_serial, out pending))
                         {
                             if (pendingCalls.Remove(reply_serial))
-                                pending.Reply = msg;
+                                pending.SetReply(msg);
 
                             return;
                         }

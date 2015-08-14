@@ -144,12 +144,12 @@ namespace Dbus.Sharp
                 properties.Add(methodSignature, new getterAndSetter());
                 if (symbol.GetMethod != null)
                 {
-                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Get" + propertyName);
+                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Get" + propertyName, false);
                     properties[methodSignature].Getter = body;
                 }
                 else
                 {
-                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Set" + propertyName);
+                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Set" + propertyName, false);
                     properties[methodSignature].Setter = body;
                 }
             }
@@ -186,8 +186,11 @@ namespace Dbus.Sharp
                 if (symbol.MethodKind != MethodKind.Ordinary)
                     return;
 
+                var isAsync = symbol.ReturnType.ToString().StartsWith("System.Threading.Tasks.Task");
+
                 var methodSignature =
                     "public " +
+                    (isAsync ? "async " : "") +
                     symbol.ReturnType.ToString() +
                     " " +
                     symbol.Name +
@@ -195,7 +198,7 @@ namespace Dbus.Sharp
                     string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
                     ")"
                 ;
-                var body = generateBody(symbol.Parameters, symbol.ReturnType, symbol.Name);
+                var body = generateBody(symbol.Parameters, symbol.ReturnType, symbol.Name, isAsync);
                 methods[methodSignature] = body;
             }
 
@@ -239,9 +242,12 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName)
+            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName, bool isAsync)
             {
                 var returnTypeString = returnType.ToString();
+                var realReturnType = isAsync ? ((INamedTypeSymbol)returnType).TypeArguments[0] : returnType;
+                var realReturnTypeString = realReturnType.ToString();
+
                 var builder = new StringBuilder();
                 builder.AppendLine("{");
 
@@ -256,42 +262,47 @@ namespace Dbus.Sharp
                     builder.AppendLine(");");
                 }
 
-                builder.AppendLine("System.Exception exception;");
-
                 Signature signatureIn;
                 Signature signatureOut;
-                sigsForMethod(parameters, returnType, out signatureIn, out signatureOut);
+                sigsForMethod(parameters, realReturnType, out signatureIn, out signatureOut);
 
                 if (returnTypeString != "void")
                     builder.Append("var reader = ");
+                if (isAsync)
+                    builder.Append("await ");
                 builder.Append("SendMethodCall(");
                 builder.Append("\"" + interfaceName + "\", ");
                 builder.Append("\"" + methodName + "\", ");
                 builder.Append("\"" + signatureIn.Value + "\", ");
                 builder.Append("writer, ");
-                builder.Append("typeof(" + returnTypeString + "), ");
-                builder.Append("out exception");
-                builder.AppendLine(");");
-
-                builder.AppendLine("if (exception != null)");
-                builder.AppendLine(" throw exception;");
+                builder.Append("typeof(" + realReturnTypeString + ")");
+                builder.Append(")");
+                if (!isAsync)
+                    if (returnTypeString != "void")
+                        builder.Append(".Result");
+                    else
+                        builder.Append(".Wait()");
+                builder.AppendLine(";");
 
                 if (returnTypeString == "void")
                     builder.AppendLine("return;");
+                //else if (returnTypeString == "System.Threading.Task")
+                //    builder.AppendLine("return reader;");
                 else
                 {
                     if (returnTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
                         returnTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
                     {
                         var typeArguments = ((INamedTypeSymbol)returnType).TypeArguments;
-                        builder.Append("return reader.ReadDictionary<");
+                        builder.Append("var result = reader.ReadDictionary<");
                         builder.Append(typeArguments[0].ToString());
                         builder.Append(",");
                         builder.Append(typeArguments[1].ToString());
                         builder.AppendLine(">();");
                     }
                     else
-                        builder.AppendLine("return (" + returnTypeString + ")reader.ReadValue(typeof(" + returnTypeString + "));");
+                        builder.AppendLine("var result = (" + realReturnTypeString + ")reader.ReadValue(typeof(" + realReturnTypeString + "));");
+                    builder.AppendLine("return result;");
                 }
 
                 builder.AppendLine("}");

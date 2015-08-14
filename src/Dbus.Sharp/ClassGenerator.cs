@@ -131,29 +131,6 @@ namespace Dbus.Sharp
                 this.interfaceName = interfaceName;
             }
 
-            public override void VisitProperty(IPropertySymbol symbol)
-            {
-                var propertyName = symbol.Name;
-                var returnTypeString = symbol.Type.ToString();
-                var methodSignature =
-                    "public " +
-                    returnTypeString +
-                    " " +
-                    propertyName
-                ;
-                properties.Add(methodSignature, new getterAndSetter());
-                if (symbol.GetMethod != null)
-                {
-                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Get" + propertyName, false);
-                    properties[methodSignature].Getter = body;
-                }
-                else
-                {
-                    var body = generateBody(Enumerable.Empty<IParameterSymbol>(), symbol.Type, "Set" + propertyName, false);
-                    properties[methodSignature].Setter = body;
-                }
-            }
-
             public override void VisitEvent(IEventSymbol symbol)
             {
                 var signature =
@@ -196,8 +173,7 @@ namespace Dbus.Sharp
                 methodName = methodName.Substring(0, methodName.Length - 5);
 
                 var methodSignature =
-                    "public " +
-                    (isAsync ? "async " : "") +
+                    "public async " +
                     symbol.ReturnType.ToString() +
                     " " +
                     symbol.Name +
@@ -205,7 +181,7 @@ namespace Dbus.Sharp
                     string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
                     ")"
                 ;
-                var body = generateBody(symbol.Parameters, symbol.ReturnType, methodName, isAsync);
+                var body = generateBody(symbol.Parameters, symbol.ReturnType, methodName);
                 methods[methodSignature] = body;
             }
 
@@ -249,23 +225,19 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName, bool isAsync)
+            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName)
             {
                 var returnTypeString = returnType.ToString();
                 var namedReturnType = returnType as INamedTypeSymbol;
-                var returnDataType = returnType;
-                var returnDataTypeString = returnType.ToString();
-                if (isAsync)
-                    if (namedReturnType.TypeArguments.Length == 0)
-                    {
-                        returnDataType = null;
-                        returnDataTypeString = null;
-                    }
-                    else
-                    {
-                        returnDataType = namedReturnType.TypeArguments[0];
-                        returnDataTypeString = returnDataType.ToString();
-                    }
+                var hasReturnType = namedReturnType.TypeArguments.Length > 0;
+
+                ITypeSymbol returnDataType = null;
+                var returnDataTypeString = "void";
+                if (hasReturnType)
+                {
+                    returnDataType = namedReturnType.TypeArguments[0];
+                    returnDataTypeString = returnDataType.ToString();
+                }
 
                 var builder = new StringBuilder();
                 builder.AppendLine("{");
@@ -285,25 +257,19 @@ namespace Dbus.Sharp
                 Signature signatureOut;
                 sigsForMethod(parameters, returnDataType, out signatureIn, out signatureOut);
 
-                if (returnTypeString != "void")
+                if (hasReturnType)
                     builder.Append("var reader = ");
-                if (isAsync)
-                    builder.Append("await ");
+                builder.Append("await ");
                 builder.Append("SendMethodCall(");
                 builder.Append("\"" + interfaceName + "\", ");
                 builder.Append("\"" + methodName + "\", ");
                 builder.Append("\"" + signatureIn.Value + "\", ");
                 builder.Append("writer, ");
-                builder.Append("typeof(" + (returnDataTypeString ?? "void") + ")");
+                builder.Append("typeof(" + returnDataTypeString + ")");
                 builder.Append(")");
-                if (!isAsync)
-                    if (returnTypeString != "void")
-                        builder.Append(".Result");
-                    else
-                        builder.Append(".Wait()");
                 builder.AppendLine(";");
 
-                if (returnTypeString != "void" && returnDataType != null)
+                if (hasReturnType)
                 {
                     builder.Append("var result = ");
                     if (returnDataTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||

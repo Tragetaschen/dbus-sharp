@@ -35,7 +35,7 @@ namespace DBus
         // STRONG TODO: GET RID OF THAT SHIT
         internal Thread mainThread = Thread.CurrentThread;
 
-        Dictionary<uint, PendingCall> pendingCalls = new Dictionary<uint, PendingCall>();
+        Dictionary<uint, TaskCompletionSource<Message>> pendingCalls = new Dictionary<uint, TaskCompletionSource<Message>>();
         Queue<Message> inbound = new Queue<Message>();
         Dictionary<ObjectPath, BusObject> registeredObjects = new Dictionary<ObjectPath, BusObject>();
 
@@ -185,13 +185,7 @@ namespace DBus
             return (uint)Interlocked.Increment(ref serial);
         }
 
-        internal async Task<Message> SendWithReplyAndBlock(Message msg)
-        {
-            PendingCall pending = SendWithReply(msg);
-            return await pending.GetReply();
-        }
-
-        internal PendingCall SendWithReply(Message msg)
+        internal Task<Message> SendWithReply(Message msg)
         {
             msg.ReplyExpected = true;
 
@@ -200,13 +194,23 @@ namespace DBus
 
             // Should we throttle the maximum number of concurrent PendingCalls?
             // Should we support timeouts?
-            PendingCall pending = new PendingCall(this);
+            var pending = new TaskCompletionSource<Message>();
             lock (pendingCalls)
                 pendingCalls[msg.Header.Serial] = pending;
 
             Send(msg);
 
-            return pending;
+            var task = pending.Task;
+
+            if (Thread.CurrentThread == mainThread)
+            {
+                while (!task.IsCompleted)
+                    HandleMessage(Transport.ReadMessage());
+
+                DispatchSignals();
+            }
+
+            return task;
         }
 
         internal virtual uint Send(Message msg)
@@ -256,14 +260,14 @@ namespace DBus
                 if (field_value != null)
                 {
                     uint reply_serial = (uint)field_value;
-                    PendingCall pending;
+                    TaskCompletionSource<Message> pending;
 
                     lock (pendingCalls)
                     {
                         if (pendingCalls.TryGetValue(reply_serial, out pending))
                         {
                             if (pendingCalls.Remove(reply_serial))
-                                pending.SetReply(msg);
+                                pending.SetResult(msg);
 
                             return;
                         }

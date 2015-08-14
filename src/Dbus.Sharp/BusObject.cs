@@ -148,7 +148,7 @@ namespace DBus
 			}
 #endif
 
-            Message retMsg = await conn.SendWithReplyAndBlock(callMsg);
+            Message retMsg = await conn.SendWithReply(callMsg);
 
             MessageReader retVal = null;
 

@@ -457,14 +457,7 @@ namespace DBus
                 return BusObject.GetObject(this, bus_name, path, type);
             }
             else
-            {
-                if (ProtocolInformation.Verbose)
-                    Console.Error.WriteLine("Warning: Note that MarshalByRefObject use is not recommended; for best performance, define interfaces");
-
-                BusObject busObject = new BusObject(this, bus_name, path);
-                DProxy prox = new DProxy(busObject, type);
-                return prox.GetTransparentProxy();
-            }
+                throw new InvalidOperationException("Only interfaces (and abstract classes?) are supported");
         }
 
         public async Task<T> GetObjectAsync<T>(string bus_name, ObjectPath path)

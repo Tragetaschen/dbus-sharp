@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using DBus;
+using System.Threading.Tasks;
 
 namespace org.freedesktop.DBus
 {
@@ -47,52 +48,52 @@ namespace org.freedesktop.DBus
     [Interface("org.freedesktop.DBus.Peer")]
     public interface Peer
     {
-        void Ping();
+        Task PingAsync();
         [return: Argument("machine_uuid")]
-        string GetMachineId();
+        Task<string> GetMachineIdAsync();
     }
 
     [Interface("org.freedesktop.DBus.Introspectable")]
     public interface Introspectable
     {
         [return: Argument("data")]
-        string Introspect();
+        Task<string> IntrospectAsync();
     }
 
     [Interface("org.freedesktop.DBus.Properties")]
     public interface Properties
     {
         [return: Argument("value")]
-        object Get(string interfaceName, string propname);
-        void Set(string interfaceName, string propname, object value);
+        Task<object> GetAsync(string interfaceName, string propname);
+        Task SetAsync(string interfaceName, string propname, object value);
         [return: Argument("props")]
-        IDictionary<string, object> GetAll(string interfaceName);
+        Task<IDictionary<string, object>> GetAllAsync(string interfaceName);
     }
 
     [Interface("org.freedesktop.DBus")]
     public interface IBus
     {
-        RequestNameReply RequestName(string name, NameFlag flags);
-        ReleaseNameReply ReleaseName(string name);
-        string Hello();
-        string[] ListNames();
-        string[] ListActivatableNames();
-        bool NameHasOwner(string name);
+        Task<RequestNameReply> RequestNameAsync(string name, NameFlag flags);
+        Task<ReleaseNameReply> ReleaseNameAsync(string name);
+        Task<string> HelloAsync();
+        Task<string[]> ListNamesAsync();
+        Task<string[]> ListActivatableNamesAsync();
+        Task<bool> NameHasOwnerAsync(string name);
         event NameOwnerChangedHandler NameOwnerChanged;
         event NameLostHandler NameLost;
         event NameAcquiredHandler NameAcquired;
-        StartReply StartServiceByName(string name, uint flags);
-        void UpdateActivationEnvironment(IDictionary<string, string> environment);
-        string GetNameOwner(string name);
-        uint GetConnectionUnixUser(string connection_name);
-        void AddMatch(string rule);
-        void RemoveMatch(string rule);
-        string GetId();
+        Task<StartReply> StartServiceByNameAsync(string name, uint flags);
+        Task UpdateActivationEnvironmentAsync(IDictionary<string, string> environment);
+        Task<string> GetNameOwnerAsync(string name);
+        Task<uint> GetConnectionUnixUserAsync(string connection_name);
+        Task AddMatchAsync(string rule);
+        Task RemoveMatchAsync(string rule);
+        Task<string> GetIdAsync();
 
         //undocumented in spec
-        string[] ListQueuedOwners(string name);
-        uint GetConnectionUnixProcessID(string connection_name);
-        byte[] GetConnectionSELinuxSecurityContext(string connection_name);
-        void ReloadConfig();
+        Task<string[]> ListQueuedOwnersAsync(string name);
+        Task<uint> GetConnectionUnixProcessIDAsync(string connection_name);
+        Task<byte[]> GetConnectionSELinuxSecurityContextAsync(string connection_name);
+        Task ReloadConfigAsync();
     }
 }

@@ -171,12 +171,12 @@ namespace Dbus.Sharp
             {
                 var builder = new StringBuilder();
                 builder.AppendLine("{");
-                builder.Append("ToggleSignal(");
+                builder.Append("ToggleSignalAsync(");
                 builder.Append("\"" + interfaceName + "\", ");
                 builder.Append("\"" + eventName + "\", ");
                 builder.Append("value, ");
                 builder.Append(isAdder ? "true" : "false");
-                builder.AppendLine(");");
+                builder.AppendLine(").Wait();");
                 builder.AppendLine("}");
                 return builder.ToString();
             }
@@ -187,6 +187,13 @@ namespace Dbus.Sharp
                     return;
 
                 var isAsync = symbol.ReturnType.ToString().StartsWith("System.Threading.Tasks.Task");
+                var methodName = symbol.Name;
+                if (!isAsync || !methodName.EndsWith("Async"))
+                {
+                    Console.WriteLine("Only asynchronous methods are supported: " + interfaceName + " " + methodName);
+                    return;
+                }
+                methodName = methodName.Substring(0, methodName.Length - 5);
 
                 var methodSignature =
                     "public " +
@@ -198,7 +205,7 @@ namespace Dbus.Sharp
                     string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
                     ")"
                 ;
-                var body = generateBody(symbol.Parameters, symbol.ReturnType, symbol.Name, isAsync);
+                var body = generateBody(symbol.Parameters, symbol.ReturnType, methodName, isAsync);
                 methods[methodSignature] = body;
             }
 

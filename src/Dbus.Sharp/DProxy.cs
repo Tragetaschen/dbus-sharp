@@ -56,7 +56,7 @@ namespace DBus
             object[] outArgs;
             object retVal;
             Exception exception;
-            busObject.Invoke(callMessage.MethodBase, callMessage.MethodName, callMessage.InArgs, out outArgs, out retVal, out exception);
+            busObject.InvokeAsync(callMessage.MethodBase, callMessage.MethodName, callMessage.InArgs, out outArgs, out retVal, out exception).Wait();
 
             MethodReturnMessageWrapper returnMessage = new MethodReturnMessageWrapper((IMethodReturnMessage)message);
             returnMessage.Exception = exception;

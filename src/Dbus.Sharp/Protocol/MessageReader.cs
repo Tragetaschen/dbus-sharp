@@ -10,6 +10,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Collections;
+using System.Threading.Tasks;
 
 namespace DBus.Protocol
 {
@@ -120,8 +121,8 @@ namespace DBus.Protocol
             }
             else if (Mapper.IsPublic(type))
             {
-                readValueCache[type] = () => GetObject(type);
-                return GetObject(type);
+                readValueCache[type] = () => GetObjectAsync(type).Result;
+                return GetObjectAsync(type).Result;
             }
             else if (!type.IsPrimitive && !type.IsEnum)
             {
@@ -211,11 +212,11 @@ namespace DBus.Protocol
             pos = check;
         }
 
-        public object GetObject(Type type)
+        public Task<object> GetObjectAsync(Type type)
         {
             ObjectPath path = ReadObjectPath();
 
-            return message.Connection.GetObject(type, (string)message.Header[FieldCode.Sender], path);
+            return message.Connection.GetObjectAsync(type, (string)message.Header[FieldCode.Sender], path);
         }
 
         public byte ReadByte()

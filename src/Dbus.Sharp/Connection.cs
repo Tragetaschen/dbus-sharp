@@ -445,9 +445,9 @@ namespace DBus
             }
         }
 
-        public object GetObject(Type type, string bus_name, ObjectPath path)
+        public async Task<object> GetObjectAsync(Type type, string bus_name, ObjectPath path)
         {
-            if (!CheckBusNameExists(bus_name))
+            if (!await CheckBusNameExistsAsync(bus_name))
                 return null;
 
             //if the requested type is an interface, we can implement it efficiently
@@ -467,14 +467,14 @@ namespace DBus
             }
         }
 
-        public T GetObject<T>(string bus_name, ObjectPath path)
+        public async Task<T> GetObjectAsync<T>(string bus_name, ObjectPath path)
         {
-            return (T)GetObject(typeof(T), bus_name, path);
+            return (T)await GetObjectAsync(typeof(T), bus_name, path);
         }
 
-        protected virtual bool CheckBusNameExists(string busName)
+        protected virtual Task<bool> CheckBusNameExistsAsync(string busName)
         {
-            return true;
+            return Task.FromResult(true);
         }
 
         public void Register(ObjectPath path, object obj)
@@ -502,12 +502,14 @@ namespace DBus
         }
 
         //these look out of place, but are useful
-        internal protected virtual void AddMatch(string rule)
+        internal protected virtual Task AddMatchAsync(string rule)
         {
+            return Task.FromResult(0);
         }
 
-        internal protected virtual void RemoveMatch(string rule)
+        internal protected virtual Task RemoveMatchAsync(string rule)
         {
+            return Task.FromResult(0);
         }
 
         static UUID ReadMachineId(string fname)

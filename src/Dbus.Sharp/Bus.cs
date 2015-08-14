@@ -5,6 +5,7 @@
 using System;
 using System.Collections.Generic;
 using org.freedesktop.DBus;
+using System.Threading.Tasks;
 
 namespace DBus
 {
@@ -77,19 +78,19 @@ namespace DBus
 
         public Bus(string address) : base(address)
         {
-            this.bus = GetObject<IBus>(DBusName, DBusPath);
+            this.bus = GetObjectAsync<IBus>(DBusName, DBusPath).Result;
             this.address = address;
-            Register();
+            RegisterAsync().Wait();
         }
 
         //should this be public?
         //as long as Bus subclasses Connection, having a Register with a completely different meaning is bad
-        void Register()
+        async Task RegisterAsync()
         {
             if (uniqueName != null)
                 throw new Exception("Bus already has a unique name");
 
-            uniqueName = bus.Hello();
+            uniqueName = await bus.HelloAsync();
         }
 
         protected override void CloseInternal()
@@ -101,61 +102,61 @@ namespace DBus
                 buses.Remove(address);
         }
 
-        protected override bool CheckBusNameExists(string busName)
+        protected override Task<bool> CheckBusNameExistsAsync(string busName)
         {
             if (busName == DBusName)
-                return true;
-            return NameHasOwner(busName);
+                return Task.FromResult(true);
+            return NameHasOwnerAsync(busName);
         }
 
-        public ulong GetUnixUser(string name)
+        public Task<uint> GetUnixUserAsync(string name)
         {
-            return bus.GetConnectionUnixUser(name);
+            return bus.GetConnectionUnixUserAsync(name);
         }
 
-        public RequestNameReply RequestName(string name)
+        public Task<RequestNameReply> RequestNameAsync(string name)
         {
-            return RequestName(name, NameFlag.None);
+            return RequestNameAsync(name, NameFlag.None);
         }
 
-        public RequestNameReply RequestName(string name, NameFlag flags)
+        public Task<RequestNameReply> RequestNameAsync(string name, NameFlag flags)
         {
-            return bus.RequestName(name, flags);
+            return bus.RequestNameAsync(name, flags);
         }
 
-        public ReleaseNameReply ReleaseName(string name)
+        public Task<ReleaseNameReply> ReleaseNameAsync(string name)
         {
-            return bus.ReleaseName(name);
+            return bus.ReleaseNameAsync(name);
         }
 
-        public bool NameHasOwner(string name)
+        public Task<bool> NameHasOwnerAsync(string name)
         {
-            return bus.NameHasOwner(name);
+            return bus.NameHasOwnerAsync(name);
         }
 
-        public StartReply StartServiceByName(string name)
+        public Task<StartReply> StartServiceByNameAsync(string name)
         {
-            return StartServiceByName(name, 0);
+            return StartServiceByNameAsync(name, 0);
         }
 
-        public StartReply StartServiceByName(string name, uint flags)
+        public Task<StartReply> StartServiceByNameAsync(string name, uint flags)
         {
-            return bus.StartServiceByName(name, flags);
+            return bus.StartServiceByNameAsync(name, flags);
         }
 
-        internal protected override void AddMatch(string rule)
+        internal protected override Task AddMatchAsync(string rule)
         {
-            bus.AddMatch(rule);
+            return bus.AddMatchAsync(rule);
         }
 
-        internal protected override void RemoveMatch(string rule)
+        internal protected override Task RemoveMatchAsync(string rule)
         {
-            bus.RemoveMatch(rule);
+            return bus.RemoveMatchAsync(rule);
         }
 
-        public string GetId()
+        public Task<string> GetIdAsync()
         {
-            return bus.GetId();
+            return bus.GetIdAsync();
         }
 
         public string UniqueName

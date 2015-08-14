@@ -55,7 +55,7 @@ namespace DBus
             }
         }
 
-        public void ToggleSignal(string iface, string member, Delegate dlg, bool adding)
+        public async Task ToggleSignalAsync(string iface, string member, Delegate dlg, bool adding)
         {
             MatchRule rule = new MatchRule();
             rule.MessageType = MessageType.Signal;
@@ -74,7 +74,7 @@ namespace DBus
                 else
                 {
                     conn.Handlers[rule] = dlg;
-                    conn.AddMatch(rule.ToString());
+                    await conn.AddMatchAsync(rule.ToString());
                 }
             }
             else if (conn.Handlers.ContainsKey(rule))
@@ -82,7 +82,7 @@ namespace DBus
                 conn.Handlers[rule] = Delegate.Remove(conn.Handlers[rule], dlg);
                 if (conn.Handlers[rule] == null)
                 {
-                    conn.RemoveMatch(rule.ToString());
+                    await conn.RemoveMatchAsync(rule.ToString());
                     conn.Handlers.Remove(rule);
                 }
             }
@@ -174,7 +174,7 @@ namespace DBus
             return retVal;
         }
 
-        public void Invoke(MethodBase methodBase, string methodName, object[] inArgs, out object[] outArgs, out object retVal, out Exception exception)
+        public Task InvokeAsync(MethodBase methodBase, string methodName, object[] inArgs, out object[] outArgs, out object retVal, out Exception exception)
         {
             outArgs = new object[0];
             retVal = null;
@@ -188,9 +188,7 @@ namespace DBus
                 string ename = parts[1];
                 Delegate dlg = (Delegate)inArgs[0];
 
-                ToggleSignal(Mapper.GetInterfaceName(mi), ename, dlg, parts[0] == "add");
-
-                return;
+                return ToggleSignalAsync(Mapper.GetInterfaceName(mi), ename, dlg, parts[0] == "add");
             }
 
             Type[] inTypes = Mapper.GetTypes(ArgDirection.In, mi.GetParameters());
@@ -219,14 +217,13 @@ namespace DBus
             {
                 reader = SendMethodCall(iface, methodName, inSig.Value, writer, mi.ReturnType).Result;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 exception = e;
             }
-            if (reader == null)
-                return;
-
-            retVal = reader.ReadValue(mi.ReturnType);
+            if (reader != null)
+                retVal = reader.ReadValue(mi.ReturnType);
+            return Task.FromResult(0);
         }
 
         public static object GetObject(Connection conn, string bus_name, ObjectPath object_path, Type declType)

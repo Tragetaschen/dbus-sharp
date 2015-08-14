@@ -971,7 +971,7 @@ namespace DBus.Protocol
         public static Signature GetSig(ITypeSymbol type)
         {
             if (type == null)
-                throw new ArgumentNullException("type");
+                return Signature.Empty;
 
             var typeString = type.ToString();
 

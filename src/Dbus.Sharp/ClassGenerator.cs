@@ -245,8 +245,20 @@ namespace Dbus.Sharp
             private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName, bool isAsync)
             {
                 var returnTypeString = returnType.ToString();
-                var realReturnType = isAsync ? ((INamedTypeSymbol)returnType).TypeArguments[0] : returnType;
-                var realReturnTypeString = realReturnType.ToString();
+                var namedReturnType = returnType as INamedTypeSymbol;
+                var returnDataType = returnType;
+                var returnDataTypeString = returnType.ToString();
+                if (isAsync)
+                    if (namedReturnType.TypeArguments.Length == 0)
+                    {
+                        returnDataType = null;
+                        returnDataTypeString = null;
+                    }
+                    else
+                    {
+                        returnDataType = namedReturnType.TypeArguments[0];
+                        returnDataTypeString = returnDataType.ToString();
+                    }
 
                 var builder = new StringBuilder();
                 builder.AppendLine("{");
@@ -264,7 +276,7 @@ namespace Dbus.Sharp
 
                 Signature signatureIn;
                 Signature signatureOut;
-                sigsForMethod(parameters, realReturnType, out signatureIn, out signatureOut);
+                sigsForMethod(parameters, returnDataType, out signatureIn, out signatureOut);
 
                 if (returnTypeString != "void")
                     builder.Append("var reader = ");
@@ -275,7 +287,7 @@ namespace Dbus.Sharp
                 builder.Append("\"" + methodName + "\", ");
                 builder.Append("\"" + signatureIn.Value + "\", ");
                 builder.Append("writer, ");
-                builder.Append("typeof(" + realReturnTypeString + ")");
+                builder.Append("typeof(" + (returnDataTypeString ?? "void") + ")");
                 builder.Append(")");
                 if (!isAsync)
                     if (returnTypeString != "void")
@@ -284,24 +296,22 @@ namespace Dbus.Sharp
                         builder.Append(".Wait()");
                 builder.AppendLine(";");
 
-                if (returnTypeString == "void")
-                    builder.AppendLine("return;");
-                //else if (returnTypeString == "System.Threading.Task")
-                //    builder.AppendLine("return reader;");
-                else
+                if (returnTypeString != "void" && returnDataType != null)
                 {
+                    builder.Append("var result = ");
                     if (returnTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
                         returnTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
                     {
                         var typeArguments = ((INamedTypeSymbol)returnType).TypeArguments;
-                        builder.Append("var result = reader.ReadDictionary<");
+                        builder.Append("reader.ReadDictionary<");
                         builder.Append(typeArguments[0].ToString());
                         builder.Append(",");
                         builder.Append(typeArguments[1].ToString());
-                        builder.AppendLine(">();");
+                        builder.Append(">()");
                     }
                     else
-                        builder.AppendLine("var result = (" + realReturnTypeString + ")reader.ReadValue(typeof(" + realReturnTypeString + "));");
+                        builder.Append("(" + returnDataTypeString + ")reader.ReadValue(typeof(" + returnDataTypeString + "))");
+                    builder.AppendLine(";");
                     builder.AppendLine("return result;");
                 }
 

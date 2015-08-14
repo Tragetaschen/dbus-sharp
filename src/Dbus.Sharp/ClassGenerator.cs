@@ -306,10 +306,10 @@ namespace Dbus.Sharp
                 if (returnTypeString != "void" && returnDataType != null)
                 {
                     builder.Append("var result = ");
-                    if (returnTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
-                        returnTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
+                    if (returnDataTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
+                        returnDataTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
                     {
-                        var typeArguments = ((INamedTypeSymbol)returnType).TypeArguments;
+                        var typeArguments = ((INamedTypeSymbol)returnDataType).TypeArguments;
                         builder.Append("reader.ReadDictionary<");
                         builder.Append(typeArguments[0].ToString());
                         builder.Append(",");

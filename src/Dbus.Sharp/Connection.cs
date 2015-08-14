@@ -231,7 +231,10 @@ namespace DBus
                 while (inbound.Count != 0)
                 {
                     Message msg = inbound.Dequeue();
-                    HandleSignal(msg);
+                    ThreadPool.QueueUserWorkItem(
+                        x => HandleSignal((Message)x),
+                        msg
+                    );
                 }
             }
         }

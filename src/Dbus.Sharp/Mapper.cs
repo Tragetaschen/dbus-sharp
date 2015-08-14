@@ -390,6 +390,8 @@ namespace DBus
         {
             this.Name = name;
         }
+
+        public bool SkipCodeGeneration { get; set; }
     }
 
     [AttributeUsage(AttributeTargets.Parameter | AttributeTargets.ReturnValue, AllowMultiple = false, Inherited = true)]

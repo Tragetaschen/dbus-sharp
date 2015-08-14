@@ -72,17 +72,19 @@ namespace Dbus.Sharp
         private string handleType(ITypeSymbol type)
         {
             var result = string.Empty;
-            var interfaceAttributeArgument = type
+            var interfaceAttribute = type
                 .GetAttributes()
                 .FirstOrDefault(x => x.AttributeClass.Name == "InterfaceAttribute")
-                ?.ConstructorArguments
-                .First()
             ;
-            if (type.Name.EndsWith("Exception"))
-                return result;
-
-            if (interfaceAttributeArgument.HasValue)
-                result += generateCodeFor(type, (string)interfaceAttributeArgument.Value.Value);
+            if (interfaceAttribute != null)
+            {
+                var skipArgument = interfaceAttribute.NamedArguments.FirstOrDefault(x => x.Key == "SkipCodeGeneration");
+                if (string.IsNullOrEmpty(skipArgument.Key) || !(bool)skipArgument.Value.Value)
+                {
+                    var interfaceAttributeArgument = interfaceAttribute.ConstructorArguments.First();
+                    result += generateCodeFor(type, (string)interfaceAttributeArgument.Value);
+                }
+            }
             foreach (var subType in type.GetTypeMembers())
                 result += handleType(subType);
 

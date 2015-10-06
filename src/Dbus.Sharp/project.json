@@ -2,7 +2,7 @@
   "version": "0.9.0-*",
   "dependencies": {
     "Mono.Posix": "4.0.0",
-    "Microsoft.Framework.Runtime.Roslyn.Abstractions": "1.0.0-beta6"
+    "Microsoft.Dnx.Compilation.CSharp.Abstractions": "1.0.0-beta7"
   },
   "frameworks": {
     "dnx451": {

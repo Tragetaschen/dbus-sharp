@@ -28,7 +28,7 @@ namespace Dbus.Sharp
         private string generateClasses(BeforeCompileContext context)
         {
             var result = "namespace " + context.ProjectContext.Name + " {";
-            result += "internal static class Dbus {";
+            result += "internal static partial class Dbus {";
 
             result += recurseNamespace(context.Compilation.GlobalNamespace);
             result += createInit();
@@ -41,7 +41,7 @@ namespace Dbus.Sharp
         private string createInit()
         {
             var builder = new StringBuilder();
-            builder.AppendLine("public static void Init()");
+            builder.AppendLine("static partial void DoInit()");
             builder.AppendLine("{");
             foreach (var implementation in implementations)
             {

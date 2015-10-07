@@ -96,8 +96,10 @@ namespace DBus.Protocol
 
         struct FieldCodeEntry
         {
+#pragma warning disable 649
             public byte Code;
             public object Value;
+#pragma warning restore
         }
 
         /*

@@ -12,17 +12,37 @@ namespace Dbus.Sharp
 {
     public class ClassGenerator : ICompileModule
     {
-        private Dictionary<string, string> implementations = new Dictionary<string, string>();
+        private Dictionary<string, string> implementations;
 
         public void BeforeCompile(BeforeCompileContext context)
         {
-            var result = generateClasses(context);
-            var syntaxTree = SyntaxFactory.ParseSyntaxTree(result);
-            //System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
-            context.Compilation = context.Compilation.AddSyntaxTrees(
-                syntaxTree
-            );
-            //Console.WriteLine("I was running");
+            try
+            {
+                implementations = new Dictionary<string, string>();
+                var result = generateClasses(context);
+                var syntaxTree = SyntaxFactory.ParseSyntaxTree(result);
+                //System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
+                context.Compilation = context.Compilation.AddSyntaxTrees(
+                    syntaxTree
+                );
+                //Console.WriteLine("I was running");
+            }
+            catch (Exception e)
+            {
+                context.Diagnostics.Add(Diagnostic.Create(
+                    new DiagnosticDescriptor(
+                        "Target001",
+                        "Dbus code generation error",
+                        "{0}\n{1}",
+                        "CodeGeneration",
+                        DiagnosticSeverity.Error,
+                        true
+                    ),
+                    null,
+                    e.Message,
+                    e.StackTrace
+                ));
+            }
         }
 
         private string generateClasses(BeforeCompileContext context)

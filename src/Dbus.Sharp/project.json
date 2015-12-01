@@ -2,7 +2,7 @@
   "version": "0.9.0-*",
   "dependencies": {
     "Mono.Posix": "4.0.0",
-    "Microsoft.Dnx.Compilation.CSharp.Abstractions": "1.0.0-beta8"
+    "Microsoft.Dnx.Compilation.CSharp.Abstractions": "1.0.0-rc1-final"
   },
   "frameworks": {
     "dnx451": {

@@ -78,7 +78,7 @@ namespace DBus
 
         public Bus(string address) : base(address)
         {
-            this.bus = GetObjectAsync<IBus>(DBusName, DBusPath).Result;
+            this.bus = GetObjectAsync<IBus>(DBusName, DBusPath, false).Result;
             this.address = address;
             RegisterAsync().Wait();
         }

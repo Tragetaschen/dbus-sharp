@@ -216,7 +216,7 @@ namespace DBus.Protocol
         {
             ObjectPath path = ReadObjectPath();
 
-            return message.Connection.GetObjectAsync(type, (string)message.Header[FieldCode.Sender], path);
+            return message.Connection.GetObjectAsync(type, (string)message.Header[FieldCode.Sender], path, true);
         }
 
         public byte ReadByte()

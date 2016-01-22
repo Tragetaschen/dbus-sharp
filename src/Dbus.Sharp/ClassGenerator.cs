@@ -180,6 +180,48 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
+            public override void VisitProperty(IPropertySymbol symbol)
+            {
+                var signature =
+                    "public " + symbol.Type.ToString() +
+                    " " +
+                    symbol.Name
+                ;
+                var type = ((INamedTypeSymbol)symbol.Type).TypeArguments[0];
+
+                properties.Add(signature, new getterAndSetter());
+                if (symbol.GetMethod != null)
+                    properties[signature].Getter = buildPropertyGet(symbol.Name, type.ToString());
+                //if (symbol.SetMethod != null)
+                //    properties[signature].Setter = buildPropertySet(symbol.Name);
+            }
+
+            private string buildPropertyGet(string propertyName, string type)
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine("{");
+                builder.Append("return ");
+                builder.Append("SendPropertyGet(");
+                builder.Append("\"" + interfaceName + "\", ");
+                builder.Append("\"" + propertyName + "\"");
+                builder.AppendLine(").ContinueWith(x => (" + type + ")x.Result);");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
+            //private string buildPropertySet(string propertyName)
+            //{
+            //    var builder = new StringBuilder();
+            //    builder.AppendLine("{");
+            //    builder.Append("SendPropertyGet(");
+            //    builder.Append("\"" + interfaceName + "\", ");
+            //    builder.Append("\"" + propertyName + "\", ");
+            //    builder.Append("value");
+            //    builder.AppendLine(").Wait();");
+            //    builder.AppendLine("}");
+            //    return builder.ToString();
+            //}
+
             public override void VisitMethod(IMethodSymbol symbol)
             {
                 if (symbol.MethodKind != MethodKind.Ordinary)

@@ -174,6 +174,29 @@ namespace DBus
             return retVal;
         }
 
+        // c.f. https://github.com/mono/dbus-sharp/pull/37
+        // for both property methods
+        public async Task<object> SendPropertyGet(string iface, string property)
+        {
+            var writer = new MessageWriter();
+            writer.Write(iface);
+            writer.Write(property);
+
+            var reader = await SendMethodCall("org.freedesktop.DBus.Properties", "Get", "ss", writer, typeof(object));
+
+            return reader.ReadValue(typeof(object));
+        }
+
+        public Task SendPropertySet(string iface, string property, object value)
+        {
+            var writer = new MessageWriter();
+            writer.Write(iface);
+            writer.Write(property);
+            writer.Write(typeof(object), value);
+
+            return SendMethodCall("org.freedesktop.DBus.Properties", "Set", "ssv", writer, typeof(void));
+        }
+
         public Task InvokeAsync(MethodBase methodBase, string methodName, object[] inArgs, out object[] outArgs, out object retVal, out Exception exception)
         {
             outArgs = new object[0];

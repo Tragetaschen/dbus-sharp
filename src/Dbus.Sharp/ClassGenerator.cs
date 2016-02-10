@@ -1,59 +1,25 @@
-﻿using Microsoft.Dnx.Compilation.CSharp;
+﻿using DBus.Protocol;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis;
-using DBus.Protocol;
+using System.Reflection;
 using System.Text;
-using Microsoft.CodeAnalysis.CSharp;
 
-namespace Dbus.Sharp
+namespace DBus
 {
-    public class ClassGenerator : ICompileModule
+    public class ClassGenerator
     {
-        private Dictionary<string, string> implementations;
+        private Dictionary<string, string> implementations = new Dictionary<string, string>();
 
-        public void BeforeCompile(BeforeCompileContext context)
+        public string Generate(IEnumerable<Type> types)
         {
-            try
-            {
-                implementations = new Dictionary<string, string>();
-                var result = generateClasses(context);
-                var syntaxTree = SyntaxFactory.ParseSyntaxTree(result);
-                //System.IO.File.WriteAllText("generated.txt", syntaxTree.GetRoot().NormalizeWhitespace().ToString());
-                context.Compilation = context.Compilation.AddSyntaxTrees(
-                    syntaxTree
-                );
-                //Console.WriteLine("I was running");
-            }
-            catch (Exception e)
-            {
-                context.Diagnostics.Add(Diagnostic.Create(
-                    new DiagnosticDescriptor(
-                        "Target001",
-                        "Dbus code generation error",
-                        "{0}\n{1}",
-                        "CodeGeneration",
-                        DiagnosticSeverity.Error,
-                        true
-                    ),
-                    null,
-                    e.Message,
-                    e.StackTrace
-                ));
-            }
-        }
+            var result = "internal static partial class Dbus {";
 
-        private string generateClasses(BeforeCompileContext context)
-        {
-            var result = "namespace " + context.ProjectContext.Name + " {";
-            result += "internal static partial class Dbus {";
-
-            result += recurseNamespace(context.Compilation.GlobalNamespace);
+            foreach (var type in types)
+                result += handleType(type);
             result += createInit();
 
-            result += "}}";
+            result += "}";
 
             return result;
         }
@@ -78,58 +44,40 @@ namespace Dbus.Sharp
             return builder.ToString();
         }
 
-        private string recurseNamespace(INamespaceSymbol ns)
+        private string handleType(Type type)
         {
-            var result = string.Empty;
-            foreach (var type in ns.GetTypeMembers())
-                result += handleType(type);
-            foreach (var subNamespace in ns.GetNamespaceMembers())
-                result += recurseNamespace(subNamespace);
+            var interfaceAttribute = type.GetCustomAttribute<InterfaceAttribute>();
 
-            return result;
-        }
-
-        private string handleType(ITypeSymbol type)
-        {
             var result = string.Empty;
-            var interfaceAttribute = type
-                .GetAttributes()
-                .FirstOrDefault(x => x.AttributeClass.Name == "InterfaceAttribute")
-            ;
             if (interfaceAttribute != null)
             {
-                var skipArgument = interfaceAttribute.NamedArguments.FirstOrDefault(x => x.Key == "SkipCodeGeneration");
-                if (string.IsNullOrEmpty(skipArgument.Key) || !(bool)skipArgument.Value.Value)
+                if (!interfaceAttribute.SkipCodeGeneration)
                 {
-                    var interfaceAttributeArgument = interfaceAttribute.ConstructorArguments.First();
-                    result += generateCodeFor(type, (string)interfaceAttributeArgument.Value);
+                    result += generateCodeFor(type, interfaceAttribute.Name);
                 }
             }
-            foreach (var subType in type.GetTypeMembers())
+            foreach (var subType in type.GetNestedTypes())
                 result += handleType(subType);
 
             return result;
         }
 
-        private string generateCodeFor(ITypeSymbol type, string interfaceName)
+        private string generateCodeFor(Type type, string interfaceName)
         {
-            implementations.Add(type.ToString(), "Generated" + type.Name);
+            implementations.Add(buildTypeString(type), "Generated" + type.Name);
 
             var builder = new StringBuilder();
-            builder.AppendLine("private class Generated" + type.Name + ": DBus.BusObject, " + type.ToString());
+            builder.AppendLine("private class Generated" + type.Name + ": DBus.BusObject, " + buildTypeString(type));
             builder.AppendLine("{");
-            var allMembers = type
-                .GetMembers()
-                .Concat(type.AllInterfaces
-                    .SelectMany(x => x.GetMembers())
-                )
-            ;
+            var allMembers = type.GetMembers().Concat(
+                type.GetInterfaces().SelectMany(x => x.GetMembers())
+            );
 
-            var visitor = new memberVisitor(interfaceName);
+            var implementer = new memberImplementer(interfaceName);
             foreach (var member in allMembers)
-                member.Accept(visitor);
+                implementer.Add(member);
 
-            builder.AppendLine(visitor.BuildImplementations());
+            builder.AppendLine(implementer.BuildImplementations());
 
             builder.AppendLine("}");
             builder.AppendLine("");
@@ -137,33 +85,43 @@ namespace Dbus.Sharp
             return builder.ToString();
         }
 
-        public void AfterCompile(AfterCompileContext context)
-        {
-        }
-
-        private class memberVisitor : SymbolVisitor
+        private class memberImplementer
         {
             private readonly string interfaceName;
             private readonly Dictionary<string, getterAndSetter> properties = new Dictionary<string, getterAndSetter>();
             private readonly Dictionary<string, getterAndSetter> events = new Dictionary<string, getterAndSetter>();
             private readonly Dictionary<string, string> methods = new Dictionary<string, string>();
 
-            public memberVisitor(string interfaceName)
+            public memberImplementer(string interfaceName)
             {
                 this.interfaceName = interfaceName;
             }
 
-            public override void VisitEvent(IEventSymbol symbol)
+            public void Add(MemberInfo member)
+            {
+                EventInfo eventInfo;
+                PropertyInfo propertyInfo;
+                MethodInfo methodInfo;
+
+                if ((eventInfo = member as EventInfo) != null)
+                    implementEvent(eventInfo);
+                else if ((propertyInfo = member as PropertyInfo) != null)
+                    implementProperty(propertyInfo);
+                else if ((methodInfo = member as MethodInfo) != null)
+                    implementMethod(methodInfo);
+            }
+
+            private void implementEvent(EventInfo e)
             {
                 var signature =
                     "public event " +
-                    symbol.Type.ToString() +
+                    buildTypeString(e.EventHandlerType) +
                     " " +
-                    symbol.Name
+                    e.Name
                 ;
                 events.Add(signature, new getterAndSetter());
-                events[signature].Getter = buildEvent(false, symbol.Name);
-                events[signature].Setter = buildEvent(true, symbol.Name);
+                events[signature].Getter = buildEvent(false, e.Name);
+                events[signature].Setter = buildEvent(true, e.Name);
             }
 
             private string buildEvent(bool isAdder, string eventName)
@@ -180,20 +138,18 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            public override void VisitProperty(IPropertySymbol symbol)
+            private void implementProperty(PropertyInfo property)
             {
                 var signature =
-                    "public " + symbol.Type.ToString() +
+                    "public " + buildTypeString(property.PropertyType) +
                     " " +
-                    symbol.Name
+                    property.Name
                 ;
-                var type = ((INamedTypeSymbol)symbol.Type).TypeArguments[0];
+                var type = property.PropertyType.GetGenericArguments()[0];
 
                 properties.Add(signature, new getterAndSetter());
-                if (symbol.GetMethod != null)
-                    properties[signature].Getter = buildPropertyGet(symbol.Name, type.ToString());
-                //if (symbol.SetMethod != null)
-                //    properties[signature].Setter = buildPropertySet(symbol.Name);
+                if (property.GetMethod != null)
+                    properties[signature].Getter = buildPropertyGet(property.Name, buildTypeString(type));
             }
 
             private string buildPropertyGet(string propertyName, string type)
@@ -209,26 +165,13 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            //private string buildPropertySet(string propertyName)
-            //{
-            //    var builder = new StringBuilder();
-            //    builder.AppendLine("{");
-            //    builder.Append("SendPropertyGet(");
-            //    builder.Append("\"" + interfaceName + "\", ");
-            //    builder.Append("\"" + propertyName + "\", ");
-            //    builder.Append("value");
-            //    builder.AppendLine(").Wait();");
-            //    builder.AppendLine("}");
-            //    return builder.ToString();
-            //}
-
-            public override void VisitMethod(IMethodSymbol symbol)
+            private void implementMethod(MethodInfo method)
             {
-                if (symbol.MethodKind != MethodKind.Ordinary)
+                if (method.IsSpecialName)
                     return;
 
-                var isAsync = symbol.ReturnType.ToString().StartsWith("System.Threading.Tasks.Task");
-                var methodName = symbol.Name;
+                var isAsync = buildTypeString(method.ReturnType).StartsWith("System.Threading.Tasks.Task");
+                var methodName = method.Name;
                 if (!isAsync || !methodName.EndsWith("Async"))
                 {
                     Console.WriteLine("Only asynchronous methods are supported: " + interfaceName + " " + methodName);
@@ -238,14 +181,14 @@ namespace Dbus.Sharp
 
                 var methodSignature =
                     "public async " +
-                    symbol.ReturnType.ToString() +
+                    buildTypeString(method.ReturnType) +
                     " " +
-                    symbol.Name +
+                    method.Name +
                     "(" +
-                    string.Join(", ", symbol.Parameters.Select(x => x.Type + " " + x.Name)) +
+                    string.Join(", ", method.GetParameters().Select(x => buildTypeString(x.ParameterType) + " " + x.Name)) +
                     ")"
                 ;
-                var body = generateBody(symbol.Parameters, symbol.ReturnType, methodName);
+                var body = generateBody(method.GetParameters(), method.ReturnType, methodName);
                 methods[methodSignature] = body;
             }
 
@@ -289,18 +232,17 @@ namespace Dbus.Sharp
                 return builder.ToString();
             }
 
-            private string generateBody(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, string methodName)
+            private string generateBody(IEnumerable<ParameterInfo> parameters, Type returnType, string methodName)
             {
-                var returnTypeString = returnType.ToString();
-                var namedReturnType = returnType as INamedTypeSymbol;
-                var hasReturnType = namedReturnType.TypeArguments.Length > 0;
+                var typeArguments = returnType.GetGenericArguments();
+                var hasReturnType = typeArguments.Length > 0;
 
-                ITypeSymbol returnDataType = null;
+                var returnDataType = typeof(void);
                 var returnDataTypeString = "void";
                 if (hasReturnType)
                 {
-                    returnDataType = namedReturnType.TypeArguments[0];
-                    returnDataTypeString = returnDataType.ToString();
+                    returnDataType = typeArguments[0];
+                    returnDataTypeString = buildTypeString(returnDataType);
                 }
 
                 var builder = new StringBuilder();
@@ -311,7 +253,7 @@ namespace Dbus.Sharp
                 foreach (var parameter in parameters)
                 {
                     builder.Append("writer.Write(typeof(");
-                    builder.Append(parameter.Type.ToString());
+                    builder.Append(buildTypeString(parameter.ParameterType));
                     builder.Append("), ");
                     builder.Append(parameter.Name);
                     builder.AppendLine(");");
@@ -319,7 +261,12 @@ namespace Dbus.Sharp
 
                 Signature signatureIn;
                 Signature signatureOut;
-                sigsForMethod(parameters, returnDataType, out signatureIn, out signatureOut);
+                sigsForMethod(
+                    parameters.Select(x => x.ParameterType),
+                    returnDataType,
+                    out signatureIn,
+                    out signatureOut
+                );
 
                 if (hasReturnType)
                     builder.Append("var reader = ");
@@ -339,11 +286,11 @@ namespace Dbus.Sharp
                     if (returnDataTypeString.StartsWith("System.Collections.Generic.Dictionary<") ||
                         returnDataTypeString.StartsWith("System.Collections.Generic.IDictionary<"))
                     {
-                        var typeArguments = ((INamedTypeSymbol)returnDataType).TypeArguments;
+                        var dataTypeArguments = returnDataType.GetGenericArguments();
                         builder.Append("reader.ReadDictionary<");
-                        builder.Append(typeArguments[0].ToString());
+                        builder.Append(buildTypeString(dataTypeArguments[0]));
                         builder.Append(",");
-                        builder.Append(typeArguments[1].ToString());
+                        builder.Append(buildTypeString(dataTypeArguments[1]));
                         builder.Append(">()");
                     }
                     else
@@ -358,17 +305,31 @@ namespace Dbus.Sharp
             }
         }
 
-        private static void sigsForMethod(IEnumerable<IParameterSymbol> parameters, ITypeSymbol returnType, out Signature signatureIn, out Signature signatureOut)
+        private static void sigsForMethod(IEnumerable<Type> parameters, Type returnType, out Signature signatureIn, out Signature signatureOut)
         {
             signatureIn = Signature.Empty;
             signatureOut = Signature.Empty;
 
             foreach (var parameter in parameters)
             {
-                signatureIn += Signature.GetSig(parameter.Type);
+                signatureIn += Signature.GetSig(parameter);
             }
 
             signatureOut += Signature.GetSig(returnType);
+        }
+
+        private static string buildTypeString(Type type)
+        {
+            if (!type.IsConstructedGenericType)
+                return type.FullName;
+
+            var genericName = type.GetGenericTypeDefinition().FullName;
+            var withoutSuffix = genericName.Substring(0, genericName.Length - 2);
+            var result = withoutSuffix + "<" +
+                string.Join(",", type.GenericTypeArguments.Select(buildTypeString)) +
+                ">"
+            ;
+            return result;
         }
 
         private class getterAndSetter

@@ -160,7 +160,9 @@ namespace DBus
                 builder.Append("SendPropertyGet(");
                 builder.Append("\"" + interfaceName + "\", ");
                 builder.Append("\"" + propertyName + "\"");
-                builder.AppendLine(").ContinueWith(x => (" + type + ")x.Result);");
+                builder.Append(")");
+                builder.Append(".ContinueWith(x => (" + type + ")x.Result)");
+                builder.AppendLine(";");
                 builder.AppendLine("}");
                 return builder.ToString();
             }
@@ -278,6 +280,7 @@ namespace DBus
                 builder.Append("writer, ");
                 builder.Append("typeof(" + returnDataTypeString + ")");
                 builder.Append(")");
+                builder.Append(".ConfigureAwait(false)");
                 builder.AppendLine(";");
 
                 if (hasReturnType)

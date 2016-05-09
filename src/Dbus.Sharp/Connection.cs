@@ -447,7 +447,7 @@ namespace DBus
 
         public async Task<object> GetObjectAsync(Type type, string bus_name, ObjectPath path, bool checkName)
         {
-            if (checkName && !await CheckBusNameExistsAsync(bus_name))
+            if (checkName && !await CheckBusNameExistsAsync(bus_name).ConfigureAwait(false))
                 return null;
 
             //if the requested type is an interface, we can implement it efficiently
@@ -462,7 +462,7 @@ namespace DBus
 
         public async Task<T> GetObjectAsync<T>(string bus_name, ObjectPath path, bool checkName)
         {
-            return (T)await GetObjectAsync(typeof(T), bus_name, path, checkName);
+            return (T)await GetObjectAsync(typeof(T), bus_name, path, checkName).ConfigureAwait(false);
         }
 
         protected virtual Task<bool> CheckBusNameExistsAsync(string busName)

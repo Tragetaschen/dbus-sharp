@@ -74,7 +74,7 @@ namespace DBus
                 else
                 {
                     conn.Handlers[rule] = dlg;
-                    await conn.AddMatchAsync(rule.ToString());
+                    await conn.AddMatchAsync(rule.ToString()).ConfigureAwait(false);
                 }
             }
             else if (conn.Handlers.ContainsKey(rule))
@@ -82,7 +82,7 @@ namespace DBus
                 conn.Handlers[rule] = Delegate.Remove(conn.Handlers[rule], dlg);
                 if (conn.Handlers[rule] == null)
                 {
-                    await conn.RemoveMatchAsync(rule.ToString());
+                    await conn.RemoveMatchAsync(rule.ToString()).ConfigureAwait(false);
                     conn.Handlers.Remove(rule);
                 }
             }
@@ -148,7 +148,7 @@ namespace DBus
 			}
 #endif
 
-            Message retMsg = await conn.SendWithReply(callMsg);
+            Message retMsg = await conn.SendWithReply(callMsg).ConfigureAwait(false);
 
             MessageReader retVal = null;
 
@@ -182,7 +182,7 @@ namespace DBus
             writer.Write(iface);
             writer.Write(property);
 
-            var reader = await SendMethodCall("org.freedesktop.DBus.Properties", "Get", "ss", writer, typeof(object));
+            var reader = await SendMethodCall("org.freedesktop.DBus.Properties", "Get", "ss", writer, typeof(object)).ConfigureAwait(false);
 
             return reader.ReadValue(typeof(object));
         }

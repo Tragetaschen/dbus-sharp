@@ -9,7 +9,6 @@ using System.Reflection;
 
 namespace DBus
 {
-    using Microsoft.CodeAnalysis;
     using Protocol;
 
     static class Mapper
@@ -135,16 +134,6 @@ namespace DBus
         public static bool IsPublic(MemberInfo mi)
         {
             return IsPublic(mi.DeclaringType);
-        }
-
-        public static bool IsPublic(ITypeSymbol type)
-        {
-            if (type.GetAttributes().Any(x => x.AttributeClass.Name == "InterfaceAttribute"))
-                return true;
-
-            // TODO: Support MarshalByRefObject from below
-
-            return false;
         }
 
         public static bool IsPublic(Type type)

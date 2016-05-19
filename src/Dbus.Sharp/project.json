@@ -1,25 +1,23 @@
 ﻿{
   "version": "0.9.0-*",
   "dependencies": {
-    "Mono.Posix": "4.0.0",
-    "Microsoft.Dnx.Compilation.CSharp.Abstractions": "1.0.0-rc1-final"
+    "Mono.Posix": "4.0.0"
   },
   "frameworks": {
-    "dnx451": {
+    "net452": {
       "frameworkAssemblies": {
-        "System.Xml": "4.0.0.0",
-        "System.Runtime": "",
-        "System.Text.Encoding": "",
-        "System.Threading.Tasks": ""
+        "System.Xml": "4.0.0.0"
       }
     }
   },
-  "compilationOptions": {
-    "allowUnsafe": true
-  },
-  "exclude": [
-    "Server.cs",
-    "ServerBus.cs",
-    "Daemon.cs"
-  ]
+  "buildOptions": {
+    "allowUnsafe": true,
+    "compile": {
+      "exclude": [
+        "Server.cs",
+        "ServerBus.cs",
+        "Daemon.cs"
+      ]
+    }
+  }
 }

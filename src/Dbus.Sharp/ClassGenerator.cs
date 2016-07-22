@@ -150,6 +150,8 @@ namespace DBus
                 properties.Add(signature, new getterAndSetter());
                 if (property.GetMethod != null)
                     properties[signature].Getter = buildPropertyGet(property.Name, buildTypeString(type));
+                if (property.SetMethod != null)
+                    properties[signature].Setter = buildPropertySet(property.Name, buildTypeString(type));
             }
 
             private string buildPropertyGet(string propertyName, string type)
@@ -163,6 +165,19 @@ namespace DBus
                 builder.Append(")");
                 builder.Append(".ContinueWith(x => (" + type + ")x.Result)");
                 builder.AppendLine(";");
+                builder.AppendLine("}");
+                return builder.ToString();
+            }
+
+            private string buildPropertySet(string propertyName, string type)
+            {
+                var builder = new StringBuilder();
+                builder.AppendLine("{");
+                builder.Append("SendPropertySet(");
+                builder.Append("\"" + interfaceName + "\", ");
+                builder.Append("\"" + propertyName + "\", ");
+                builder.Append("value.Result");
+                builder.AppendLine(").Wait();");
                 builder.AppendLine("}");
                 return builder.ToString();
             }
